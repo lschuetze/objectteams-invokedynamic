@@ -24,20 +24,16 @@ import org.eclipse.objectteams.otredyn.runtime.IBinding;
  */
 public class Binding implements Comparable<Binding>, IBinding {
 	
-	/** The callin modifier 'before' */
-	public static final int BEFORE = 1;
-	/** The callin modifier 'replace' */
-	public static final int REPLACE = 2;
-	/** The callin modifier 'after' */
-	public static final int AFTER = 3;
-	
 	AbstractBoundClass teamClass;
 	private String callinLabel;
 	private String boundClass;
 	private String memberName;
 	private String memberSignature;
 	private String weavableBaseClassName;
-	private int callinModifier;
+	private String roleClassName;
+	private String roleMethodName;
+	private String roleMethodSignature;
+	private CallinModifier callinModifier;
 	/**
 	 * Locally unique id for (an element in) this binding:
 	 * For CALLIN_BINDING this is the callinId,
@@ -57,9 +53,10 @@ public class Binding implements Comparable<Binding>, IBinding {
 	 * Create a callin binding.
 	 */
 	public Binding(AbstractBoundClass teamClass,
-			String roleClassName, String callinLabel, String boundClassName, 
+			String roleClassName, String roleMethodName, String roleMethodSignature,
+			String callinLabel, String boundClassName, 
 			String memberName, String memberSignature, String weavableBaseClassName, 
-			int callinModifier, int callinId, int baseFlags, boolean handleCovariantReturn, boolean requireBaseSuperCall) 
+			CallinModifier callinModifier, int callinId, int baseFlags, boolean handleCovariantReturn, boolean requireBaseSuperCall) 
 	{
 		this.teamClass = teamClass;
 		this.callinLabel = callinLabel;
@@ -67,6 +64,9 @@ public class Binding implements Comparable<Binding>, IBinding {
 		this.memberName = memberName;
 		this.memberSignature = memberSignature;
 		this.weavableBaseClassName = weavableBaseClassName;
+		this.roleClassName = roleClassName;
+		this.roleMethodName = roleMethodName;
+		this.roleMethodSignature = roleMethodSignature;
 		this.callinModifier = callinModifier;
 		this.perTeamId = callinId;
 		this.baseFlags = baseFlags;
@@ -139,6 +139,7 @@ public class Binding implements Comparable<Binding>, IBinding {
 				&& type == other.type && perTeamId == other.perTeamId;
 	}
 	
+	// TODO Lars: CHANGE THAT!!
 	public int compareTo(Binding other) {
 		// ordering strategy for callin bindings:
 		// - first criterion: callinModifier: before/after have higher priority than replace.
@@ -157,9 +158,9 @@ public class Binding implements Comparable<Binding>, IBinding {
 		} else {
 			if (this.callinModifier != other.callinModifier) {
 				// replace has lower priority than before/after:
-				if (this.callinModifier == REPLACE)
+				if (this.callinModifier == CallinModifier.REPLACE)
 					return -1;
-				else if (other.callinModifier == REPLACE)
+				else if (other.callinModifier == CallinModifier.REPLACE)
 					return 1;
 			}
 			// the following comparison respects precedence:
@@ -179,9 +180,6 @@ public class Binding implements Comparable<Binding>, IBinding {
 		case CALLIN_BINDING: buf.append("callin: ");break;
 		case METHOD_ACCESS: buf.append("callout: ");break;
 		case FIELD_ACCESS: buf.append("callout-to-field: ");break;
-		case ROLE_BASE_BINDING: 
-			buf.append("playedBy: ").append(this.boundClass);
-			return buf.toString();
 		}
 		buf.append('{');
 		buf.append(this.perTeamId);
@@ -191,5 +189,25 @@ public class Binding implements Comparable<Binding>, IBinding {
 		buf.append(this.memberName);
 		buf.append(this.memberSignature);
 		return buf.toString();
+	}
+
+	@Override
+	public String getRoleClassName() {
+		return roleClassName;
+	}
+
+	@Override
+	public CallinModifier getCallinModifier() {
+		return callinModifier;
+	}
+
+	@Override
+	public String getRoleMethodName() {
+		return roleMethodName;
+	}
+
+	@Override
+	public String getRoleMethodSignature() {
+		return roleMethodSignature;
 	}
 }

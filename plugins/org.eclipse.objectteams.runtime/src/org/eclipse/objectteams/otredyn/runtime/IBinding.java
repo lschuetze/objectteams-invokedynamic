@@ -24,16 +24,40 @@ package org.eclipse.objectteams.otredyn.runtime;
 public interface IBinding {
 
 	public static enum BindingType {
-		CALLIN_BINDING,
-		FIELD_ACCESS,
-		METHOD_ACCESS,
-		ROLE_BASE_BINDING
+		CALLIN_BINDING, FIELD_ACCESS, METHOD_ACCESS, ROLE_BASE_BINDING
 	}
-	
+
 	public final static short CALLIN_BASE = 1;
 	public final static short STATIC_BASE = 2;
 	public final static short FINAL_BASE = 4;
 	public final static short PRIVATE_BASE = 8;
+
+	public static enum CallinModifier {
+		BEFORE(1), REPLACE(2), AFTER(3);
+
+		private final int ord;
+
+		CallinModifier(int ord) {
+			this.ord = ord;
+		}
+
+		public static CallinModifier fromString(String s) {
+			switch (s) {
+			case "before":
+				return BEFORE;
+			case "after":
+				return AFTER;
+			case "replace":
+				return REPLACE;
+			}
+			// Should not reach
+			throw new IllegalArgumentException("Invalid callin modifier string in bytecode: " + s);
+		}
+
+		public int getCallinModifierValue() {
+			return ord;
+		}
+	}
 
 	BindingType getType();
 
@@ -49,6 +73,15 @@ public interface IBinding {
 	/** Signature (JVM encoding) of the bound base member. */
 	String getMemberSignature();
 
+	/** @since 2.7 */
+	String getRoleClassName();
+	
+	/** @since 2.7 */
+	String getRoleMethodName();
+	
+	/** @since 2.7 */
+	String getRoleMethodSignature();
+
 	/** Answer flags describing the base method (static, private, final, callin). */
 	int getBaseFlags();
 
@@ -59,8 +92,12 @@ public interface IBinding {
 	boolean isHandleCovariantReturn();
 
 	/**
-	 * Does the bound role method issue a base super call (needing to be handled in __OT$callOrig)?
+	 * Does the bound role method issue a base super call (needing to be handled in
+	 * __OT$callOrig)?
+	 * 
 	 * @since 2.5
 	 */
 	boolean requiresBaseSuperCall();
+
+	CallinModifier getCallinModifier();
 }

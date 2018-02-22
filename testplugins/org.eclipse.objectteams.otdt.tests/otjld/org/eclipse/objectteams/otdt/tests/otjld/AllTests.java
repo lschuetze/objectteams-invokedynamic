@@ -154,7 +154,7 @@ public class AllTests {
 		return suite;
 	}
 	public static void addComplianceSuite(TestSuite suite, Class<?> testClass) {
-		addComplianceSuite(suite, testClass, AbstractCompilerTest.F_1_5);
+		addComplianceSuite(suite, testClass, AbstractCompilerTest.F_1_8); //AbstractCompilerTest.F_1_5);
 	}
 	static void addComplianceSuite(TestSuite suite, Class<?> testClass, int compliance) {
 		// Reset forgotten subsets tests

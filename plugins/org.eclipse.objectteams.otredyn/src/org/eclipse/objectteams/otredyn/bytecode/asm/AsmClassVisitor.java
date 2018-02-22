@@ -22,6 +22,7 @@ import org.eclipse.objectteams.otredyn.bytecode.Binding;
 import org.eclipse.objectteams.otredyn.bytecode.asm.Attributes.CallinBindingsAttribute;
 import org.eclipse.objectteams.otredyn.bytecode.asm.Attributes.OTClassFlagsAttribute;
 import org.eclipse.objectteams.otredyn.bytecode.asm.Attributes.RoleBaseBindingsAttribute;
+import org.eclipse.objectteams.otredyn.runtime.IBinding.CallinModifier;
 import org.eclipse.objectteams.otredyn.bytecode.asm.Attributes.CallinBindingsAttribute.MultiBinding;
 import org.eclipse.objectteams.otredyn.bytecode.asm.Attributes.CallinPrecedenceAttribute;
 import org.eclipse.objectteams.otredyn.bytecode.asm.Attributes.OTSpecialAccessAttribute;
@@ -109,51 +110,61 @@ class AsmClassVisitor extends ClassVisitor {
 			System.err.println("OTDRE: bytecode attribute in class "+this.clazz.getName()+" has no type "+attribute.getClass().getName());
 			return;
 		}
-		if (attribute.type.equals(Attributes.ATTRIBUTE_OT_DYN_CALLIN_BINDINGS)) {
+		switch(attribute.type) {
+		case Attributes.ATTRIBUTE_OT_DYN_CALLIN_BINDINGS:
 			CallinBindingsAttribute attr = (CallinBindingsAttribute) attribute;
 			MultiBinding[] multiBindings = attr.getBindings();
 			for (int i=multiBindings.length-1; i>=0; i--) { // reverse loop to ensure proper overwriting:
-				String roleClassName = multiBindings[i].getRoleClassName();
-				String callinLabel = multiBindings[i].getCallinLabel();
-				String baseClassName = multiBindings[i].getBaseClassName();
+				MultiBinding multiBinding = multiBindings[i];
+				
+				String roleClassName = multiBinding.getRoleClassName();
+				String roleMethodName = multiBinding.getRoleMethodName();
+				String roleMethodSignature = multiBinding.getRoleMethodSignature();
+				String callinLabel = multiBinding.getCallinLabel();
+				String baseClassName = multiBinding.getBaseClassName();
 				clazz.boundBaseClasses.add(baseClassName.replace('/', '.'));
-				String[] baseMethodNames = multiBindings[i].getBaseMethodNames();
-				String[] baseMethodSignatures = multiBindings[i].getBaseMethodSignatures();
-				String[] declaringBaseClassNames = multiBindings[i].getDeclaringBaseClassName();
-				int callinModifier = multiBindings[i].getCallinModifier();
-				int[] callinIds = multiBindings[i].getCallinIds();
-				int[] baseFlags = multiBindings[i].getBaseFlags();
-				boolean handleCovariantReturn = multiBindings[i].isHandleCovariantReturn();
-				boolean requireBaseSuperCall = multiBindings[i].requiresBaseSuperCall();
+				String[] baseMethodNames = multiBinding.getBaseMethodNames();
+				String[] baseMethodSignatures = multiBinding.getBaseMethodSignatures();
+				String[] declaringBaseClassNames = multiBinding.getDeclaringBaseClassName();
+				CallinModifier callinModifier = multiBinding.getCallinModifier();
+				int[] callinIds = multiBinding.getCallinIds();
+				int[] baseFlags = multiBinding.getBaseFlags();
+				boolean handleCovariantReturn = multiBinding.isHandleCovariantReturn();
+				boolean requireBaseSuperCall = multiBinding.requiresBaseSuperCall();
 				for (int j = 0; j < baseMethodNames.length; j++) {
 					String declaringBaseClassName = declaringBaseClassNames[j];
 					String weavableBaseClass = (baseFlags[j] & (STATIC | FINAL)) != 0 ? declaringBaseClassName : baseClassName;
-					Binding binding = new Binding(clazz, roleClassName, callinLabel, baseClassName, 
+					Binding binding = new Binding(clazz, roleClassName, roleMethodName, roleMethodSignature, callinLabel, baseClassName, 
 												  baseMethodNames[j], baseMethodSignatures[j], weavableBaseClass,
 												  callinModifier, callinIds[j], baseFlags[j], handleCovariantReturn, requireBaseSuperCall);
 					clazz.addBinding(binding);
 					clazz.boundBaseClasses.add(declaringBaseClassName.replace('/', '.'));
 				}
 			}
-		} else if (attribute.type.equals(Attributes.ATTRIBUTE_CALLIN_PRECEDENCE)) {
-			CallinPrecedenceAttribute attr = (CallinPrecedenceAttribute)attribute;
-			clazz.precedenceses.add(attr.labels);
-		} else if (attribute.type.equals(Attributes.ATTRIBUTE_OT_CLASS_FLAGS)) {
+			break;
+		case Attributes.ATTRIBUTE_CALLIN_PRECEDENCE:
+			CallinPrecedenceAttribute cpattr = (CallinPrecedenceAttribute)attribute;
+			clazz.precedenceses.add(cpattr.labels);
+			break;
+		case Attributes.ATTRIBUTE_OT_CLASS_FLAGS:
 			clazz.setOTClassFlags(((OTClassFlagsAttribute)attribute).flags);
-		} else if (attribute.type.equals(Attributes.ATTRIBUTE_OT_SPECIAL_ACCESS)) {
+			break;
+		case Attributes.ATTRIBUTE_OT_SPECIAL_ACCESS:
 			OTSpecialAccessAttribute accessAttribute = (OTSpecialAccessAttribute)attribute;
 			accessAttribute.registerAt(clazz);
 			for (DecapsMethod method : accessAttribute.methods) {
 				for (String weaveInto : method.weaveIntoClasses)
 					clazz.boundBaseClasses.add(weaveInto);
 			}
-		} else if (attribute.type.equals(Attributes.ATTRIBUTE_ROLE_BASE_BINDINGS)) {
+			break;
+		case Attributes.ATTRIBUTE_ROLE_BASE_BINDINGS:
 			for (String base : ((RoleBaseBindingsAttribute) attribute).bases) {
 				if (base.charAt(0) == '^')
 					base = base.substring(1);
 				clazz.boundBaseClasses.add(base.replace('/', '.'));
 				clazz.addBinding(new Binding(clazz, base));
 			}
+			break;
 		}
 	}
 	

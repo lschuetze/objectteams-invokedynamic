@@ -288,7 +288,7 @@ class AsmWritableBoundClass extends AsmBoundClass {
 	 */
 	@Override
 	protected void createCallAllBindingsCallInOrgMethod(Method boundMethod,
-			int boundMethodId, boolean needToAddMethod) {
+			int boundMethodId, String joinpointDescr, boolean needToAddMethod) {
 		assert (isTransformationActive) : "No transformation active";
 		if (needToAddMethod) {
 			String desc = boundMethod.getSignature();
@@ -298,7 +298,7 @@ class AsmWritableBoundClass extends AsmBoundClass {
 			nodes.add(new CreateSpecificSuperCallInCallOrigAdapter(this, getInternalSuperClassName(), boundMethod, boundMethodId));
 		}
 		nodes.add(new CreateCallAllBindingsCallInOrgMethod(boundMethod,
-				boundMethodId));
+				boundMethodId, joinpointDescr));
 
 	}
 
@@ -498,30 +498,4 @@ class AsmWritableBoundClass extends AsmBoundClass {
 			this.superIsWeavable = weavingContext.isWeavable(getSuperClassName(), considerSupers);
 		return this.superIsWeavable;
 	}
-
-	@Override
-	public String toString() {
-		StringBuilder buf = new StringBuilder();
-		toDebugString(buf, "");
-		return buf.toString();
-	}
-
-	public void toDebugString(StringBuilder buf, String indent) {
-		buf.append(indent).append("AsmWritableBoundClass ").append(getName()).append('\n');
-		buf.append(indent).append("[\n");
-		buf.append(indent).append("    isTransformed=").append(isTransformed).append('\n');
-		buf.append(indent).append("    isTransformedForMemberAccess=").append(isTransformedForMemberAccess).append('\n');
-		buf.append(indent).append("    isTransformedStatic=").append(isTransformedStatic).append('\n');
-		buf.append(indent).append("    isFirstTransformation=").append(isFirstTransformation).append('\n');
-		buf.append(indent).append("    isTransformationActive=").append(isTransformationActive).append('\n');
-		buf.append(indent).append("    boundBaseClasses=").append(boundBaseClasses).append('\n');
-		buf.append(indent).append("    openBindingTasks=").append(openBindingTasks).append('\n');
-		buf.append(indent).append("    parsed=").append(parsed).append('\n');
-		buf.append(indent).append("    isUnweavable=").append(isUnweavable).append('\n');
-		buf.append(indent).append("    subclasses=\n");
-		for (AbstractBoundClass sub : subclasses.keySet())
-			sub.toDebugString(buf, indent+"        ");
-		buf.append(indent).append("]\n");
-	}
-	
 }

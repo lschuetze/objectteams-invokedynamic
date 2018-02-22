@@ -11,7 +11,6 @@
         </sealing>
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
-        <javaElement handleIdentifier="=org.eclipse.objectteams.runtime/src&lt;org.objectteams"/>
-        <javaElement handleIdentifier="=org.eclipse.objectteams.runtime/src&lt;org.eclipse.objectteams.otredyn.runtime"/>
+        <javaElement handleIdentifier="=org.eclipse.objectteams.runtime/src"/>
     </selectedElements>
 </jardesc>

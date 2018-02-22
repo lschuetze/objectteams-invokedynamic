@@ -25,6 +25,7 @@ import org.eclipse.objectteams.otredyn.bytecode.ClassRepository;
 import org.eclipse.objectteams.otredyn.runtime.ClassIdentifierProviderFactory;
 import org.eclipse.objectteams.otredyn.runtime.IBinding;
 import org.eclipse.objectteams.otredyn.runtime.IClassIdentifierProvider;
+import org.eclipse.objectteams.otredyn.runtime.IBinding.CallinModifier;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Label;
@@ -76,22 +77,27 @@ public abstract class Attributes {
 		/** Represents all base method bindings of one callin binding. */
 		protected static class MultiBinding {
 			private String   roleClassName;
+			private String roleMethodName;
+			private String roleMethodSignature;
 			private String   callinLabel;
 			private String   baseClassName;
 			private String[] baseMethodNames;
 			private String[] baseMethodSignatures;
 			private String[] declaringBaseClassNames;
-			private int      callinModifier;
+			private CallinModifier      callinModifier;
 			private int[]    callinIds;
 			private int[]    baseFlags;
 			private boolean  isHandleCovariantReturn;
 			private boolean  requireBaseSuperCall;
-			MultiBinding(String roleName, String callinLabel,
-						 String baseClassName, 
+			
+			MultiBinding(String roleName, String roleMethodName, String roleMethodSignature,
+					String callinLabel, String baseClassName, 
 						 String[] baseMethodNames, String[] baseMethodSignatures, String[] declaringBaseClassNames,
-						 int callinModifier, int[] callinIds, int[] baseFlags, int flags) 
+						 CallinModifier callinModifier, int[] callinIds, int[] baseFlags, int flags) 
 			{
 				this.roleClassName = roleName;
+				this.roleMethodName = roleMethodName;
+				this.roleMethodSignature = roleMethodSignature;
 				this.callinLabel = callinLabel;
 				this.baseClassName = baseClassName;
 				this.baseMethodNames = baseMethodNames;
@@ -103,8 +109,17 @@ public abstract class Attributes {
 				this.isHandleCovariantReturn = (flags & COVARIANT_BASE_RETURN) != 0;
 				this.requireBaseSuperCall = (flags & BASE_SUPER_CALL) != 0;
 			}
+			
 			protected String getRoleClassName() {
 				return roleClassName;
+			}
+			
+			protected String getRoleMethodName() {
+				return roleMethodName;
+			}
+			
+			protected String getRoleMethodSignature() {
+				return roleMethodSignature;
 			}
 
 			protected String getBaseClassName() {
@@ -119,10 +134,10 @@ public abstract class Attributes {
 				return baseMethodSignatures;
 			}
 			
-			protected int getCallinModifier() {
+			protected CallinModifier getCallinModifier() {
 				return this.callinModifier;
 			}
-
+			
 			protected int[] getCallinIds() {
 				return callinIds;
 			}
@@ -152,19 +167,13 @@ public abstract class Attributes {
 			this.bindings = new MultiBinding[bindingsCount];
 		}
 		
-		private void addBinding(int i, String roleName, String callinLabel,
-				                String baseClassName, 
+		private void addBinding(int i, String roleName, String roleMethodName, String roleMethodSignature, 
+				String callinLabel, String baseClassName, 
 				                String[] baseMethodNames, String[] baseMethodSignatures, String[] declaringBaseClassNames,
 				                String callinModifierName, int[] callinIds, int[] baseFlags, int flags) {
-			int callinModifier = 0;
-			if ("before".equals(callinModifierName))
-				callinModifier = Binding.BEFORE;
-			else if ("after".equals(callinModifierName))
-				callinModifier = Binding.AFTER;
-			else
-				callinModifier = Binding.REPLACE;
-			this.bindings[i] = new MultiBinding(roleName, callinLabel,
-					                            baseClassName, 
+			CallinModifier callinModifier = CallinModifier.fromString(callinModifierName);
+			this.bindings[i] = new MultiBinding(roleName, roleMethodName, roleMethodSignature,
+					callinLabel, baseClassName, 
 					                            baseMethodNames, baseMethodSignatures, declaringBaseClassNames,
 					                            callinModifier, callinIds, baseFlags, flags);
 		}
@@ -178,7 +187,9 @@ public abstract class Attributes {
 			for (int i = 0; i < bindingsCount; i++) {
 				String roleName					= cr.readUTF8(off, buf);	off += 2;
 				String callinLabel				= cr.readUTF8(off, buf);	off += 2;
-				/* skip roleSelector, roleSignature */						off += 4;
+				String roleMethodName = cr.readUTF8(off, buf);	off += 2;
+				String roleMethodSignature = cr.readUTF8(off, buf);	off += 2;
+				///* skip roleSelector, roleSignature */						off += 4;
 				String callinModifier			= cr.readUTF8(off, buf);	off += 2;
 				int flags						= cr.readByte(off);			off += 1;
 				String baseClassName 			= cr.readUTF8(off, buf);	off += 2;
@@ -197,8 +208,8 @@ public abstract class Attributes {
 					baseFlags[m]				= cr.readByte(off);			off++;
 					/* skip translationFlags */								off += 2;
 				}
-				attr.addBinding(i, roleName, callinLabel,
-								baseClassName,
+				attr.addBinding(i, roleName, roleMethodName, roleMethodSignature,
+						callinLabel,	 baseClassName,
 								baseMethodNames, baseMethodSignatures, declaringBaseClassNames,
 								callinModifier, callinIds, baseFlags, flags);
 			}
@@ -228,6 +239,7 @@ public abstract class Attributes {
 			return buf.toString();
 		}
 	}
+	
 	protected static class RoleBaseBindingsAttribute extends Attribute {
 		String[] roles;
 		String[] bases;

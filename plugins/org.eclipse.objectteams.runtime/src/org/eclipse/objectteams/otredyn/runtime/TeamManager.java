@@ -16,7 +16,9 @@
  **********************************************************************/
 package org.eclipse.objectteams.otredyn.runtime;
 
+import java.lang.invoke.SwitchPoint;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +44,7 @@ public class TeamManager implements ITeamManager {
 	//	void handleTeamStateChange(ITeam t, TeamStateChange stateChange) ;
 	private static List<List<ITeam>> _teams = new ArrayList<List<ITeam>>();
 	private static List<List<Integer>> _callinIds = new ArrayList<List<Integer>>();
+	private static List<List<SwitchPoint>> _switchpoints = new ArrayList<>();
 	private static Map<String, Integer> joinpointMap = new HashMap<String, Integer>();
 	// key: Team class, value: list of global memberIds, indexed by local accessId, id of null means "not mapped in this team (try super)"
 	private static Map<Class<?>, List<Integer>> accessIdMap = new HashMap<Class<?>, List<Integer>>();
@@ -57,6 +60,17 @@ public class TeamManager implements ITeamManager {
 		Team.registerTeamManager(new TeamManager()); // install callback
 	}
 
+	
+	public synchronized static ITeam[] getTeams(int joinpointId) {
+		List<ITeam> teams = _teams.get(joinpointId);
+		return teams.toArray(new ITeam[teams.size()]);
+	}
+	
+	public synchronized static int[] getCallinIds(int joinpointId) {
+		List<Integer> ids = _callinIds.get(joinpointId);
+		return ids.stream().mapToInt(Integer::intValue).toArray();
+	}
+	
 	/**
 	 * Returns all active teams and corresponding callin IDs for joinpoint.
 	 * This method is intended to be called by generated client code.
@@ -313,7 +327,8 @@ public class TeamManager implements ITeamManager {
 	 * @param joinpointId
 	 * @param stateChange
 	 */
-	private synchronized static void changeTeamsForJoinpoint(ITeam t, int callinId, int joinpointId, TeamManager.TeamStateChange stateChange) {
+	private synchronized static void changeTeamsForJoinpoint(ITeam t, int callinId, int joinpointId,
+			TeamManager.TeamStateChange stateChange) {
 		switch (stateChange) {
 		case REGISTER:
 			List<ITeam> teams = _teams.get(joinpointId);
@@ -331,7 +346,15 @@ public class TeamManager implements ITeamManager {
 				index = teams.indexOf(t);
 			}
 			break;
-		default: throw new RuntimeException("Unknown team state change: " + stateChange.name());
+		default:
+			throw new RuntimeException("Unknown team state change: " + stateChange.name());
+		}
+
+		// If size > ID than there are already SwitchPoints for that joinpoint which should be invalidated
+		if (_switchpoints.size() > joinpointId) {
+			List<SwitchPoint> list = _switchpoints.remove(joinpointId);
+			_switchpoints.add(joinpointId, new ArrayList<>());
+			SwitchPoint.invalidateAll(list.toArray(new SwitchPoint[list.size()]));
 		}
 	}
 
@@ -425,5 +448,50 @@ public class TeamManager implements ITeamManager {
 				pendingTasks.set(task); // no success try later ??
 			}
 		}
+	}
+	
+	public synchronized static void registerSwitchPoint(SwitchPoint newSwitchPoint, int joinpointId) {
+		if (_switchpoints.size() <= joinpointId) {
+			List<SwitchPoint> list = new ArrayList<>();
+			list.add(newSwitchPoint);
+			// TODO Lars: What was the idea here?
+			// Fill empty space to circumvent IndexOutOfBoundsException
+			for(int i = _switchpoints.size(); i < joinpointId; ++i) {
+				_switchpoints.add(new ArrayList<>());
+			}
+			_switchpoints.add(joinpointId, list);
+		} else {
+			List<SwitchPoint> list = _switchpoints.get(joinpointId);
+			list.add(newSwitchPoint);
+		}
+	}
+
+
+	public static List<IBinding> getPrecedenceSortedCallinBindings(ITeam team, String joinpoint) {
+		IClassIdentifierProvider provider = ClassIdentifierProviderFactory.getClassIdentifierProvider();
+		Class<? extends ITeam> teamClass = team.getClass();
+		String teamId = provider.getClassIdentifier(teamClass);
+		IBoundTeam boundTeam = classRepository.getTeam(teamClass.getName(), teamId, teamClass.getClassLoader());
+
+		List<IBinding> result = new ArrayList<>(boundTeam.getBindings().size());
+
+		for (IBinding binding : boundTeam.getBindings()) {
+			if (binding.getType() != IBinding.BindingType.CALLIN_BINDING)
+				continue;
+			// OTDRE cannot add methods into a sub base, hence we have to use the declaring
+			// base class for static methods:
+			// (see https://bugs.eclipse.org/435136#c1)
+			String boundClassName = ((binding.getBaseFlags() & IBinding.STATIC_BASE) != 0)
+					? binding.getDeclaringBaseClassName()
+					: binding.getBoundClass();
+			String boundClassIdentifier = provider.getBoundClassIdentifier(teamClass, boundClassName);
+			String bindingJoinpoint = boundClassIdentifier + "." + binding.getMemberName()
+					+ binding.getMemberSignature();
+			bindingJoinpoint = bindingJoinpoint.substring(0, bindingJoinpoint.indexOf(')') + 1);
+			if (bindingJoinpoint.equals(joinpoint)) {
+				result.add(binding);
+			}
+		}
+		return result;
 	}
 }

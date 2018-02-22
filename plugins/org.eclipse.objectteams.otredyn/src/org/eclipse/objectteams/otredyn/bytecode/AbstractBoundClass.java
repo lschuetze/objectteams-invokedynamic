@@ -1139,9 +1139,11 @@ public abstract class AbstractBoundClass implements IBoundClass {
 			}
 			if (isWeavable)
 				createSuperCallInCallOrig(boundMethodId);
-			else
+			else {
+				String joinpointDescr = getMethodIdentifier(method);
 				// can't weave into the declaring class, add an override here:
-				createCallAllBindingsCallInOrgMethod(method, boundMethodId, true/*needToAddMethod*/);
+				createCallAllBindingsCallInOrgMethod(method, boundMethodId, joinpointDescr, true/*needToAddMethod*/);
+			}
 		} else {
 			createDispatchCodeInCallAllBindings(joinpointId, boundMethodId);
 		}
@@ -1172,9 +1174,10 @@ public abstract class AbstractBoundClass implements IBoundClass {
 				.getJoinpointId(getMethodIdentifier(method));
 		int boundMethodId = method.getGlobalId(this);
 		if (task.doAllTransformations()) {
+			String joinpointDescr = getMethodIdentifier(method);
 			moveCodeToCallOrig(method, boundMethodId, task.requiresBaseSuperCall());
 			createDispatchCodeInCallAllBindings(joinpointId, boundMethodId);
-			createCallAllBindingsCallInOrgMethod(method, boundMethodId, false);
+			createCallAllBindingsCallInOrgMethod(method, boundMethodId, joinpointDescr, false);
 		} else {
 			createDispatchCodeInCallAllBindings(joinpointId, joinpointId);
 		}
@@ -1188,9 +1191,10 @@ public abstract class AbstractBoundClass implements IBoundClass {
 	private void weaveBindingOfSubclass(WeavingTask task) {
 		prepareForFirstTransformation();
 		Method method = getMethod(task);
+		String joinpointDescr = getMethodIdentifier(method);
 		int boundMethodId = method.getGlobalId(this);
 		moveCodeToCallOrig(method, boundMethodId, false);
-		createCallAllBindingsCallInOrgMethod(method, boundMethodId, false);
+		createCallAllBindingsCallInOrgMethod(method, boundMethodId, joinpointDescr, false);
 
 	}
 
@@ -1219,7 +1223,7 @@ public abstract class AbstractBoundClass implements IBoundClass {
 	protected abstract void createSuperCallInCallOrig(int boundMethodId);
 
 	protected abstract void createCallAllBindingsCallInOrgMethod(
-			Method boundMethod, int joinpointId, boolean needToAddMethod);
+			Method boundMethod, int joinpointId, String joinpointDescr, boolean needToAddMethod);
 
 	protected abstract void createDispatchCodeInCallAllBindings(
 			int joinpointId, int boundMethodId);
