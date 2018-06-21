@@ -62,11 +62,20 @@ public class Lookup {
 		try {
 			return lookup.findVirtual(declaringClass, name, type);
 		} catch (NoSuchMethodException e) {
-			NoSuchMethodError ee = new NoSuchMethodError();
-			ee.initCause(e);
-			throw ee;
+			// Try super
+			try {
+				return lookup.findVirtual(declaringClass.getSuperclass(), name, type);
+			} catch (NoSuchMethodException ex) {
+				NoSuchMethodError ee = new NoSuchMethodError("Class " + declaringClass + " and " + declaringClass.getSuperclass() + ", name " + name + " , type " + type.toMethodDescriptorString());
+				ee.initCause(e);
+				throw ee;
+			} catch (IllegalAccessException ie) {
+				IllegalAccessError ee = new IllegalAccessError(ie.getMessage() + " declaringClass " + declaringClass);
+				ee.initCause(ie);
+				throw ee;
+			}
 		} catch (IllegalAccessException e) {
-			IllegalAccessError ee = new IllegalAccessError();
+			IllegalAccessError ee = new IllegalAccessError(e.getMessage());
 			ee.initCause(e);
 			throw ee;
 		}
@@ -87,15 +96,7 @@ public class Lookup {
 	public MethodHandle findRoleMethod(IBinding binding, ITeam team) {
 		final Class<?> roleType = getRoleType(binding, team.getClass(), false);
 
-		final MethodType mt;
-		if (!MT_ROLE_CACHE.containsKey(roleType.getName())) {
-			// final MethodHandles.Lookup lookup = team.getLookup(TeamManager.class);
-			mt = MethodType.fromMethodDescriptorString(binding.getRoleMethodSignature(), roleType.getClassLoader());
-			MT_ROLE_CACHE.put(roleType.getName(), mt);
-		} else {
-			mt = MT_ROLE_CACHE.get(roleType.getName());
-		}
-
+		final MethodType mt = MethodType.fromMethodDescriptorString(binding.getRoleMethodSignature(), roleType.getClassLoader());
 		try {
 			return lookup.findVirtual(roleType, binding.getRoleMethodName(), mt);
 		} catch (NoSuchMethodException e) {
