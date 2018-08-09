@@ -17,8 +17,6 @@ package org.eclipse.objectteams.runtime;
 
 import java.lang.instrument.IllegalClassFormatException;
 
-import org.eclipse.jdt.annotation.Nullable;
-
 /**
  * Protocol for re-weaving a class that has already been defined.
  * Each implementation instance represents the task for one given class.
@@ -31,5 +29,5 @@ public interface IReweavingTask {
 	 * @throws IllegalClassFormatException various problems during bytecode transformation, e.g.,
 	 * 	unexpected / illegal byte codes (like RET) encountered.
 	 */
-	public void reweave(@Nullable Class<?> definedClass) throws IllegalClassFormatException;
+	public void reweave(Class<?> definedClass) throws IllegalClassFormatException;
 }

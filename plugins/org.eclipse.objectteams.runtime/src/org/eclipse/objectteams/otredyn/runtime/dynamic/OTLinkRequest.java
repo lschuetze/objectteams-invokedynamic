@@ -1,11 +1,11 @@
 package org.eclipse.objectteams.otredyn.runtime.dynamic;
 
-public class LinkRequest {
+public class OTLinkRequest {
 
-	private CallSiteDescriptor descriptor;
+	private DynamicCallSiteDescriptor descriptor;
 	private Object[] arguments;
 
-	public LinkRequest(CallSiteDescriptor descriptor, Object... arguments) {
+	public OTLinkRequest(DynamicCallSiteDescriptor descriptor, Object... arguments) {
 		this.descriptor = descriptor;
 		this.arguments = arguments;
 	}
@@ -14,7 +14,7 @@ public class LinkRequest {
 		return arguments != null ? arguments.clone() : null;
 	}
 
-	public CallSiteDescriptor getCallSiteDescriptor() {
+	public DynamicCallSiteDescriptor getCallSiteDescriptor() {
 		return descriptor;
 	}
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<jardesc>
+    <jar path="org.eclipse.objectteams.otdt/lib/otredyn.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/org.eclipse.objectteams.otredyn/otre.jardesc" exportErrors="false" exportWarnings="true" includeDirectoryEntries="false" overwrite="true" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="true" manifestLocation="" manifestVersion="1.0" reuseManifest="false" saveManifest="false" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+        <javaElement handleIdentifier="=org.eclipse.objectteams.runtime/src&lt;org.eclipse.objectteams.otredyn.runtime.dynamic"/>
+        <javaElement handleIdentifier="=org.eclipse.objectteams.runtime/src&lt;org.eclipse.objectteams.otredyn.runtime.dynamic.linker.support"/>
+        <javaElement handleIdentifier="=org.eclipse.objectteams.otredyn/src"/>
+        <javaElement handleIdentifier="=org.eclipse.objectteams.runtime/src&lt;org.eclipse.objectteams.otredyn.runtime.dynamic.linker"/>
+    </selectedElements>
+</jardesc>

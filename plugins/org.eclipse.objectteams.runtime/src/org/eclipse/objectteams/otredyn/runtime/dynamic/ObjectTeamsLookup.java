@@ -3,33 +3,20 @@ package org.eclipse.objectteams.otredyn.runtime.dynamic;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.util.HashMap;
 
 import org.eclipse.objectteams.otredyn.runtime.IBinding;
+import org.eclipse.objectteams.otredyn.runtime.dynamic.linker.support.ObjectTeamsTypeUtilities;
 import org.objectteams.ITeam;
 
-public class Lookup {
-	private final static HashMap<String, MethodType> MT_ROLE_CACHE = new HashMap<>();
-	private final MethodHandles.Lookup lookup;
-
-	public Lookup(MethodHandles.Lookup lookup) {
-		this.lookup = lookup;
-	}
-
-	public Class<?> lookupClass() {
-		return lookup.lookupClass();
-	}
+public class ObjectTeamsLookup {
 
 	public static MethodHandle findOwnSpecial(MethodHandles.Lookup lookup, String name, Class<?> rtype,
 			Class<?>... ptypes) {
-		return new Lookup(lookup).findOwnSpecial(name, rtype, ptypes);
+		return findSpecial(lookup, lookup.lookupClass(), name, MethodType.methodType(rtype, ptypes));
 	}
 
-	public MethodHandle findOwnSpecial(String name, Class<?> rtype, Class<?>... ptypes) {
-		return findSpecial(lookup.lookupClass(), name, MethodType.methodType(rtype, ptypes));
-	}
-
-	public MethodHandle findSpecial(Class<?> declaringClass, String name, MethodType type) {
+	public static MethodHandle findSpecial(MethodHandles.Lookup lookup, Class<?> declaringClass, String name,
+			MethodType type) {
 		try {
 			return lookup.findSpecial(declaringClass, name, type, declaringClass);
 		} catch (NoSuchMethodException e) {
@@ -43,7 +30,7 @@ public class Lookup {
 		}
 	}
 
-	public MethodHandle findOwnVirtual(String name, MethodType type) {
+	public static MethodHandle findOwnVirtual(MethodHandles.Lookup lookup, String name, MethodType type) {
 		try {
 			return lookup.findVirtual(lookup.lookupClass(), name, type);
 		} catch (NoSuchMethodException e) {
@@ -57,23 +44,16 @@ public class Lookup {
 		}
 	}
 
-	public MethodHandle findVirtual(Class<?> declaringClass, String name, MethodType type) {
+	public static MethodHandle findVirtual(MethodHandles.Lookup lookup, Class<?> declaringClass, String name,
+			MethodType type) {
 		// TODO error
 		try {
 			return lookup.findVirtual(declaringClass, name, type);
 		} catch (NoSuchMethodException e) {
-			// Try super
-			try {
-				return lookup.findVirtual(declaringClass.getSuperclass(), name, type);
-			} catch (NoSuchMethodException ex) {
-				NoSuchMethodError ee = new NoSuchMethodError("Class " + declaringClass + " and " + declaringClass.getSuperclass() + ", name " + name + " , type " + type.toMethodDescriptorString());
-				ee.initCause(e);
-				throw ee;
-			} catch (IllegalAccessException ie) {
-				IllegalAccessError ee = new IllegalAccessError(ie.getMessage() + " declaringClass " + declaringClass);
-				ee.initCause(ie);
-				throw ee;
-			}
+			NoSuchMethodError ee = new NoSuchMethodError("Class " + declaringClass + " and "
+					+ declaringClass.getSuperclass() + ", name " + name + " , type " + type.toMethodDescriptorString());
+			ee.initCause(e);
+			throw ee;
 		} catch (IllegalAccessException e) {
 			IllegalAccessError ee = new IllegalAccessError(e.getMessage());
 			ee.initCause(e);
@@ -81,22 +61,11 @@ public class Lookup {
 		}
 	}
 
-	public Class<?> getRoleType(IBinding binding, Class<?> teamClass, boolean itf) {
-		final String roleClassName = new StringBuilder(teamClass.getName()).append(itf ? "$" : "$__OT__")
-				.append(binding.getRoleClassName()).toString().intern();
-		try {
-			return Class.forName(roleClassName, false, teamClass.getClassLoader());
-		} catch (ClassNotFoundException e) {
-			NoSuchMethodError ee = new NoSuchMethodError();
-			ee.initCause(e);
-			throw ee;
-		}
-	}
+	public static MethodHandle findRoleMethod(MethodHandles.Lookup lookup, IBinding binding, ITeam team) {
+		final Class<?> roleType = ObjectTeamsTypeUtilities.getRoleImplementationType(binding, team.getClass());
 
-	public MethodHandle findRoleMethod(IBinding binding, ITeam team) {
-		final Class<?> roleType = getRoleType(binding, team.getClass(), false);
-
-		final MethodType mt = MethodType.fromMethodDescriptorString(binding.getRoleMethodSignature(), roleType.getClassLoader());
+		final MethodType mt = MethodType.fromMethodDescriptorString(binding.getRoleMethodSignature(),
+				roleType.getClassLoader());
 		try {
 			return lookup.findVirtual(roleType, binding.getRoleMethodName(), mt);
 		} catch (NoSuchMethodException e) {
@@ -110,9 +79,31 @@ public class Lookup {
 		}
 	}
 
-	public MethodHandle findOrig(MethodType baseMethodType) throws NoSuchMethodException, IllegalAccessException {
+	public static MethodHandle findOrig(MethodHandles.Lookup lookup, MethodType baseMethodType) {
 		Class<?> baseClass = lookup.lookupClass();
-		return lookup.findVirtual(baseClass, "_OT$callOrig", baseMethodType.dropParameterTypes(0, 1));
+		try {
+			return lookup.findVirtual(baseClass, "_OT$callOrig", baseMethodType.dropParameterTypes(0, 1));
+		} catch (NoSuchMethodException e) {
+			NoSuchMethodError ee = new NoSuchMethodError();
+			ee.initCause(e);
+			throw ee;
+		} catch (IllegalAccessException e) {
+			IllegalAccessError ee = new IllegalAccessError();
+			ee.initCause(e);
+			throw ee;
+		}
+	}
+
+	public static MethodHandle findLifting(MethodHandles.Lookup lookup, IBinding binding, Class<?> teamClass) {
+		String liftingMethod = ("_OT$liftTo$" + binding.getRoleClassName()).intern();
+		MethodHandle convertBaseToRoleObjectHandle = findVirtual(lookup, teamClass, liftingMethod, MethodType
+				.methodType(ObjectTeamsTypeUtilities.getRoleInterfaceType(binding, teamClass), lookup.lookupClass()));
+
+		MethodHandle adaptedConvertBaseToRoleObjectHandle = convertBaseToRoleObjectHandle
+				.asType(MethodType.methodType(ObjectTeamsTypeUtilities.getRoleImplementationType(binding, teamClass),
+						teamClass, lookup.lookupClass()));
+
+		return adaptedConvertBaseToRoleObjectHandle;
 	}
 
 }

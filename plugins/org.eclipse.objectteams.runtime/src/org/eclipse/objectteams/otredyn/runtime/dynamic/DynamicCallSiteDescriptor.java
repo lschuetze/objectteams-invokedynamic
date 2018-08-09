@@ -2,45 +2,77 @@ package org.eclipse.objectteams.otredyn.runtime.dynamic;
 
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
-import java.util.StringTokenizer;
 
-public class CallSiteDescriptor {
+import jdk.dynalink.CallSiteDescriptor;
+import jdk.dynalink.NamedOperation;
+import jdk.dynalink.NamespaceOperation;
+import jdk.dynalink.Operation;
+import jdk.dynalink.StandardOperation;
 
-	private final Lookup lookup;
-	private final String[] tokenizedName;
-	private final MethodType type;
-	private String joinpointDescriptor;
+public class DynamicCallSiteDescriptor extends CallSiteDescriptor {
 
-	public CallSiteDescriptor(Lookup lookup, String name, MethodType type, String joinpointDescriptor) {
-		this.lookup = lookup;
+	public static final int CALL_IN = 0;
+	public static final int CALL_NEXT = 1;
+
+	private static final int OPERATION_MASK = 1;
+
+	// TODO: GET for future callout implementations
+	private static final Operation[] OPERATIONS = new Operation[] { StandardOperation.CALL, StandardOperation.CALL };
+
+	private final int flags;
+	private final String name;
+	private final String joinpointDescriptor;
+
+	private DynamicCallSiteDescriptor(Lookup lookup, String name, Operation operation, MethodType type,
+			String joinpointDescriptor, int flags) {
+		super(lookup, operation, type);
+		this.name = name;
 		this.joinpointDescriptor = joinpointDescriptor;
-		this.tokenizedName = tokenizeName(name);
-		this.type = type;
+		this.flags = flags;
 	}
 
-	public Lookup getLookup() {
-		return lookup;
-	}
-	
 	public String getJoinpointDescriptor() {
 		return joinpointDescriptor;
 	}
 
-	public String[] getName() {
-		return tokenizedName;
+	public static DynamicCallSiteDescriptor get(Lookup lookup, String name, MethodType type, String joinpointDescriptor,
+			int flags) {
+		final int operationIndex = flags & OPERATION_MASK;
+		Operation operation = OPERATIONS[operationIndex];
+		return new DynamicCallSiteDescriptor(lookup, name, operation, type, joinpointDescriptor, flags);
 	}
 
-	public MethodType getType() {
-		return type;
+	public static Operation getBaseOperation(final CallSiteDescriptor desc) {
+		return NamespaceOperation.getBaseOperation(NamedOperation.getBaseOperation(desc.getOperation()));
 	}
 
-	private String[] tokenizeName(String name) {
-		StringTokenizer tokenizer = new StringTokenizer(name, ".");
-		String[] tokens = new String[tokenizer.countTokens()];
-		for (int i = 0; i < tokens.length; ++i) {
-			String token = tokenizer.nextToken();
-			tokens[i] = token.intern();
+	public static StandardOperation getStandardOperation(final CallSiteDescriptor desc) {
+		return (StandardOperation) getBaseOperation(desc);
+	}
+
+	public static String getOperand(final CallSiteDescriptor desc) {
+		final Operation operation = desc.getOperation();
+		return operation instanceof NamedOperation ? ((NamedOperation) operation).getName().toString() : null;
+	}
+
+	protected String getName() {
+		return name;
+	}
+
+	public int getFlags() {
+		return flags;
+	}
+
+	@Override
+	public boolean equals(final Object obj) {
+		if (!(obj instanceof DynamicCallSiteDescriptor)) {
+			return false;
 		}
-		return tokens;
+		return super.equals(obj) && flags == ((DynamicCallSiteDescriptor) obj).flags;
+	}
+
+	@Override
+	public int hashCode() {
+		return super.hashCode() ^ flags;
 	}
 }
