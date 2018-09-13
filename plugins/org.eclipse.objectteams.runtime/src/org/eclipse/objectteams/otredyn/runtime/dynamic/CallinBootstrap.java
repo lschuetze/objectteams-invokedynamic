@@ -5,6 +5,8 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
 import org.eclipse.objectteams.otredyn.runtime.dynamic.linker.GuardingDynamicCallinLinker;
+import org.objectteams.IBoundBase2;
+import org.objectteams.ITeam;
 
 import jdk.dynalink.DynamicLinker;
 import jdk.dynalink.DynamicLinkerFactory;
@@ -36,10 +38,15 @@ public class CallinBootstrap {
 	 * @param joinpointDescription
 	 * @return
 	 */
-	public static CallSite bootstrap(MethodHandles.Lookup lookup, String name, MethodType type, String joinpointDescr,
+	public static CallSite callAllBindings(MethodHandles.Lookup lookup, String name, MethodType type, String joinpointDescr,
 			int flags) {
 		return dynamicLinker
 				.link(new ChainedCallSite(DynamicCallSiteDescriptor.get(lookup, name, type, joinpointDescr, flags)));
+	}
+	
+	public static CallSite callNext(MethodHandles.Lookup lookup, String name, MethodType type,
+			IBoundBase2 baseArg, ITeam[] teams, int index, int[] callinIds, int bmId, Object[] args, Object[] boxedArgs, int basecallFlag) {
+		return null;
 	}
 
 }

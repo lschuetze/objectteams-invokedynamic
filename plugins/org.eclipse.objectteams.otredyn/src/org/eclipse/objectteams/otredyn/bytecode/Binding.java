@@ -136,7 +136,7 @@ public class Binding implements Comparable<Binding>, IBinding {
 		return boundClass.equals(other.boundClass)
 				&& memberName.equals(other.memberName)
 				&& memberSignature.equals(other.memberSignature)
-				&& type == other.type && perTeamId == other.perTeamId;
+				&& type.equals(other.type) && perTeamId == other.perTeamId;
 	}
 	
 	// TODO Lars: CHANGE THAT!!
@@ -152,16 +152,16 @@ public class Binding implements Comparable<Binding>, IBinding {
 		if (this.callinLabel == null || other.callinLabel == null) {
 			// at least one binding is a decaps binding
 			if (this.callinLabel != null)
-				return 1;
-			else if (other.callinLabel != null)
 				return -1;
+			else if (other.callinLabel != null)
+				return 1;
 		} else {
 			if (this.callinModifier != other.callinModifier) {
 				// replace has lower priority than before/after:
 				if (this.callinModifier == CallinModifier.REPLACE)
-					return -1;
-				else if (other.callinModifier == CallinModifier.REPLACE)
 					return 1;
+				else if (other.callinModifier == CallinModifier.REPLACE)
+					return -1;
 			}
 			// the following comparison respects precedence:
 			compare = this.teamClass.compare(this.callinLabel, other.callinLabel);
@@ -177,7 +177,10 @@ public class Binding implements Comparable<Binding>, IBinding {
 	public String toString() {
 		StringBuffer buf = new StringBuffer();
 		switch (this.type) {
-		case CALLIN_BINDING: buf.append("callin: ");break;
+		case CALLIN_BINDING:
+			buf.append(callinModifier.name());
+			buf.append(" callin: ");
+			break;
 		case METHOD_ACCESS: buf.append("callout: ");break;
 		case FIELD_ACCESS: buf.append("callout-to-field: ");break;
 		}

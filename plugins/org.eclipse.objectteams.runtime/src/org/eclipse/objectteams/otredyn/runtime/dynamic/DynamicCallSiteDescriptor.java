@@ -12,7 +12,6 @@ import jdk.dynalink.StandardOperation;
 public class DynamicCallSiteDescriptor extends CallSiteDescriptor {
 
 	public static final int CALL_IN = 0;
-	public static final int CALL_NEXT = 1;
 
 	private static final int OPERATION_MASK = 1;
 

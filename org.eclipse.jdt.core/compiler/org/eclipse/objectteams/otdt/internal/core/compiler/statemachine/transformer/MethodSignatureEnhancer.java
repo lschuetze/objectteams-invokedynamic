@@ -103,6 +103,11 @@ public class MethodSignatureEnhancer implements IOTConstants, TypeConstants, Cla
 		this.weavingScheme = weavingScheme;
 		if (weavingScheme == WeavingScheme.OTDRE) {
 			this.ENHANCING_ARG_NAMES = new char[][] {
+				// invdyn args begin
+					"lookup".toCharArray(),
+					"name".toCharArray(),
+					"type".toCharArray(),
+				// invdyn args end
 					"_OT$baseArg".toCharArray(), 
 					"_OT$teams".toCharArray(), 
 					"_OT$index".toCharArray(),
@@ -136,6 +141,11 @@ public class MethodSignatureEnhancer implements IOTConstants, TypeConstants, Cla
 //{OTDyn: configurable:
 		if (scope.compilerOptions().weavingScheme == WeavingScheme.OTDRE)
 			return new TypeBinding[] {
+				// invdyn args start
+				scope.getType(IOTConstants.MH_LOOKUP, 5),
+				scope.getType(IOTConstants.STRING, 3),
+				scope.getType(IOTConstants.INVOKE_METHODTYPE, 4),
+				// invdyn args end
 				scope.getType(IOTConstants.ORG_OBJECTTEAMS_IBOUNDBASE2, 3), 	// _OT$baseArg
 				scope.createArrayType(scope.getOrgObjectteamsITeam(), 1),  		// _OT$teams
 				TypeBinding.INT,    	                               	 		// _OT$index
@@ -189,6 +199,11 @@ public class MethodSignatureEnhancer implements IOTConstants, TypeConstants, Cla
 //{OTDyn: configurable:
 			this.weavingScheme == WeavingScheme.OTDRE
 			? new TypeReference[] {
+					// invdyn args begin
+					gen.qualifiedTypeReference(MH_LOOKUP),
+					gen.qualifiedTypeReference(STRING),
+					gen.qualifiedTypeReference(INVOKE_METHODTYPE),
+					//invdyn args end
 					gen.qualifiedTypeReference(ORG_OBJECTTEAMS_IBOUNDBASE2),		// _OT$baseArg
 					gen.qualifiedArrayTypeReference(ORG_OBJECTTEAMS_ITEAM, 1),	// _OT$teams
 					gen.singleTypeReference(TypeConstants.INT),						// _OT$index

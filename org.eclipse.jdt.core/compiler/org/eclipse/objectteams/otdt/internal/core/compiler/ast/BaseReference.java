@@ -20,10 +20,10 @@
  **********************************************************************/
 package org.eclipse.objectteams.otdt.internal.core.compiler.ast;
 
+import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.QualifiedThisReference;
 import org.eclipse.jdt.internal.compiler.ast.ThisReference;
 import org.eclipse.jdt.internal.compiler.codegen.CodeStream;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions.WeavingScheme;
@@ -50,6 +50,11 @@ public class BaseReference extends ThisReference {
 	public BaseReference(int start, int end) {
 		super(start, end);
 	}
+	
+	@Override
+	public boolean isImplicitThis() {
+		return false;
+	}
 
 	/**
 	 * Adjust the receiver of the enclosing base call.
@@ -69,19 +74,24 @@ public class BaseReference extends ThisReference {
 			WeavingScheme weavingScheme)
 	{
 		boolean redirectToTeam = isStatic || (weavingScheme == WeavingScheme.OTDRE); // _OT$callNext is found via MyTeam.this
+		final char[] dynamicCallinBootstrapTypeName = "org.eclipse.objectteams.otredyn.runtime.dynamic.CallinBootstrap".toCharArray(); //$NON-NLS-1$
+		
 		if (outerCallinMethod != null) {
 			// use "R.this" in order to point to the correct class, direct enclosing is a local class.
 	        ReferenceBinding enclosingRole = outerCallinMethod.binding.declaringClass;
 	        ReferenceBinding receiverType = redirectToTeam?
 						        				enclosingRole.enclosingType() :
 						        				enclosingRole;
-			this._wrappee = gen.qualifiedThisReference(gen.singleTypeReference(receiverType.internalName()));
+						        				
+			//this._wrappee = gen.qualifiedThisReference(gen.singleTypeReference(receiverType.internalName()));
+			this._wrappee = gen.qualifiedTypeReference(CharOperation.splitOn('.', dynamicCallinBootstrapTypeName));//new char[][] { dynamicCallinBootstrapTypeName });
 	        return enclosingRole;
 		} else if (redirectToTeam) {
 			// use MyTeam.this:
 	        ReferenceBinding receiverType = enclosingType.enclosingType();
 	        if (receiverType != null) // null happens when callin method is not inside a role
-	        	this._wrappee = gen.qualifiedThisReference(receiverType);
+	        	//this._wrappee = gen.qualifiedThisReference(receiverType);
+	        	this._wrappee = gen.qualifiedTypeReference(CharOperation.splitOn('.', dynamicCallinBootstrapTypeName)); //new char[][] { dynamicCallinBootstrapTypeName });
 		}
 		return enclosingType;
 	}
@@ -138,6 +148,7 @@ public class BaseReference extends ThisReference {
 	}
 
 	public boolean isQualified() {
-		return (this._wrappee instanceof QualifiedThisReference);
+		return true;
+		//return (this._wrappee instanceof QualifiedThisReference);
 	}
 }

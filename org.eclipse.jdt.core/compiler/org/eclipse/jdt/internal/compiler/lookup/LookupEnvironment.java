@@ -283,6 +283,7 @@ public ReferenceBinding askForType(char[][] compoundName, /*@NonNull*/ModuleBind
 		// FIXME(SH): it might happen that this method finds a binary role,
 		//           later the team is found as a source type having the role inline!!!
 	assert clientModule != null : "lookup needs a module"; //$NON-NLS-1$
+	
 	NameEnvironmentAnswer[] answers = null;
 	if (this.useModuleSystem) {
 		IModuleAwareNameEnvironment moduleEnv = (IModuleAwareNameEnvironment) this.nameEnvironment;
@@ -342,6 +343,7 @@ public ReferenceBinding askForType(char[][] compoundName, /*@NonNull*/ModuleBind
 */
 ReferenceBinding askForType(PackageBinding packageBinding, char[] name, ModuleBinding clientModule) {
 	assert clientModule != null : "lookup needs a module"; //$NON-NLS-1$
+	
 	if (packageBinding == null) {
 		packageBinding = this.defaultPackage;
 	}

@@ -19,6 +19,7 @@
  **********************************************************************/
 package org.eclipse.objectteams.otdt.core.compiler;
 
+import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 
 /**
@@ -183,7 +184,7 @@ public interface IOTConstants
 // predefined classes and interfaces:
 	public static final char[] ORG = "org".toCharArray();
 	public static final char[] OBJECTTEAMS = "objectteams".toCharArray();
-
+	
 	public static final char[][] ORG_OBJECTTEAMS = {ORG, OBJECTTEAMS};
 	public static final char[] ITEAM = "ITeam".toCharArray();
 	public static final char[] TEAM = "Team".toCharArray();
@@ -229,6 +230,11 @@ public interface IOTConstants
 
 	public static final char[][] ROLE_CAST_EXCEPTION 			  = {ORG, OBJECTTEAMS,
 																	 "RoleCastException".toCharArray()};
+	
+	public static final char[][] MH_LOOKUP = CharOperation.splitOn('.', "java.lang.invoke.MethodHandles.Lookup".toCharArray());
+	public static final char[][] STRING = CharOperation.splitOn('.', "java.lang.String".toCharArray());
+	public static final char[][] INVOKE_METHODTYPE = CharOperation.splitOn('.', "java.lang.invoke.MethodType".toCharArray());
+	
 	/** 
 	 * @since 3.7 (OT 2.0)
 	 */

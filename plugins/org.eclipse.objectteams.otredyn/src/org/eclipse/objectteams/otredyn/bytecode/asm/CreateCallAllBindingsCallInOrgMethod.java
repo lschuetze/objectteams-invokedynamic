@@ -115,7 +115,7 @@ public class CreateCallAllBindingsCallInOrgMethod extends AbstractTransformableC
 	
 	
 	private static final Handle bootstrapHandle = new Handle(Opcodes.H_INVOKESTATIC,
-			"org/eclipse/objectteams/otredyn/runtime/dynamic/CallinBootstrap", "bootstrap",
+			"org/eclipse/objectteams/otredyn/runtime/dynamic/CallinBootstrap", "callAllBindings",
 			CallinBootstrap.BOOTSTRAP_METHOD_TYPE.toMethodDescriptorString(), false);
 
 	private void generateInvocation(MethodNode method, Type[] args, AbstractInsnNode insertBefore,
