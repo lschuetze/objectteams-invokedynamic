@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import org.eclipse.objectteams.otredyn.runtime.IBinding;
+import org.eclipse.objectteams.otredyn.runtime.IBinding.CallinModifier;
 import org.eclipse.objectteams.otredyn.runtime.TeamManager;
 import org.eclipse.objectteams.otredyn.runtime.dynamic.DynamicCallSiteDescriptor;
 import org.eclipse.objectteams.otredyn.runtime.dynamic.ObjectTeamsLookup;
@@ -88,6 +89,10 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 				processedBindings.add(binding);
 
 				MethodHandle roleMethod = ObjectTeamsLookup.findRoleMethod(desc.getLookup(), binding, currentTeam);
+				//System.out.println("BEFORE: " + roleMethod);
+				if(binding.getCallinModifier() == CallinModifier.REPLACE)
+					roleMethod = MethodHandles.insertArguments(roleMethod, 1, null, null, null);
+				//System.out.println("AFTER: " + roleMethod);
 				MethodHandle liftRoleHandle = ObjectTeamsLookup.findLifting(desc.getLookup(), binding,
 						currentTeam.getClass());
 				MethodHandle liftRole = liftRoleHandle.bindTo(currentTeam);
@@ -149,8 +154,6 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 			MethodHandle roleMethod, MethodHandle liftRole) {
 		// If there is a replace callin we will need to centrally store the callin
 		// context (teams[], callinIds[]) for that callsite.
-		System.out.println(roleMethod);
-		System.out.println(baseMethodType);
 		final MethodHandle reducedRoleMethod = MethodHandles.insertArguments(roleMethod, 2, teams, 0, callinIds);
 		MethodHandle adaptedReplace = MethodHandles.filterArguments(reducedRoleMethod, 0, liftRole);
 		MethodType doubleBaseType = baseMethodType.insertParameterTypes(0, baseMethodType.parameterType(0));

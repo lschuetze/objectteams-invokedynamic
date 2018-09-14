@@ -46,6 +46,7 @@ public class CallinBootstrap {
 	
 	public static CallSite callNext(MethodHandles.Lookup lookup, String name, MethodType type,
 			IBoundBase2 baseArg, ITeam[] teams, int index, int[] callinIds, int bmId, Object[] args, Object[] boxedArgs, int basecallFlag) {
+		System.out.println("CALL NEXT BOOTSTRAP");
 		return null;
 	}
 
