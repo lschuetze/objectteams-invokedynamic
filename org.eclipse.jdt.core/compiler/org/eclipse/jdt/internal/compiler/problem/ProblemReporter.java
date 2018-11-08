@@ -246,7 +246,6 @@ import org.eclipse.objectteams.otdt.internal.core.compiler.model.TeamModel;
 import org.eclipse.objectteams.otdt.internal.core.compiler.model.TypeModel;
 import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.copyinheritance.CopyInheritance;
 import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.copyinheritance.CopyInheritance.RoleConstructorCall;
-import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.transformer.MethodSignatureEnhancer;
 import org.eclipse.objectteams.otdt.internal.core.compiler.util.AstEdit;
 import org.eclipse.objectteams.otdt.internal.core.compiler.util.AstGenerator;
 import org.eclipse.objectteams.otdt.internal.core.compiler.util.Protections;
@@ -9046,7 +9045,7 @@ private String typesAsString(MethodBinding methodBinding, TypeBinding[] paramete
 		}
 	}
 //{ObjectTeams: heuristically beautify:
-	MethodSignatureEnhancer.beautifyTypesString(buffer, makeShort, this.options.weavingScheme);
+//	MethodSignatureEnhancer.beautifyTypesString(buffer, makeShort, this.options.weavingScheme);
 // SH}
 	return buffer.toString();
 }
@@ -9066,7 +9065,7 @@ private String typesAsString(TypeBinding[] types, boolean makeShort, boolean sho
 			buffer.append(new String(makeShort ? type.shortReadableName() : type.readableName()));
 	}
 //{ObjectTeams: heuristically beautify:
-	MethodSignatureEnhancer.beautifyTypesString(buffer, makeShort, this.options.weavingScheme);
+//	MethodSignatureEnhancer.beautifyTypesString(buffer, makeShort, this.options.weavingScheme);
 // SH}
 	return buffer.toString();
 }

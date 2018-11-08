@@ -33,7 +33,6 @@ import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.NullLiteral;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedThisReference;
 import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
-import org.eclipse.jdt.internal.compiler.ast.Statement;
 import org.eclipse.jdt.internal.compiler.ast.ThisReference;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions.WeavingScheme;
@@ -48,7 +47,6 @@ import org.eclipse.objectteams.otdt.internal.core.compiler.control.ITranslationS
 import org.eclipse.objectteams.otdt.internal.core.compiler.control.StateHelper;
 import org.eclipse.objectteams.otdt.internal.core.compiler.mappings.CallinImplementorDyn;
 import org.eclipse.objectteams.otdt.internal.core.compiler.model.MethodModel;
-import org.eclipse.objectteams.otdt.internal.core.compiler.smap.SourcePosition;
 import org.eclipse.objectteams.otdt.internal.core.compiler.util.AstGenerator;
 import org.eclipse.objectteams.otdt.internal.core.compiler.util.TSuperHelper;
 
@@ -235,7 +233,8 @@ public class TransformStatementsVisitor
     				throw new InternalCompilerError("Missing scope for error reporting"); //$NON-NLS-1$
     		} else {
     			// return stored value:
-    			returnStatement.expression = gen.singleNameReference(OT_RESULT);
+    			//TODO Lars: Check if we still need OT_RESULT
+//    			returnStatement.expression = gen.singleNameReference(OT_RESULT);
     		}
     	}
     	return true;
@@ -251,48 +250,48 @@ public class TransformStatementsVisitor
     @Override
     public void endVisit(MethodDeclaration methodDecl, ClassScope scope) {
     	if (checkPopCallinMethod(methodDecl)) {
-    		// assume method had no errors (else it would not have been pushed)
-    		TypeBinding returnType = MethodModel.getReturnType(methodDecl.binding);
-    		// return type was already adjusted by SourceTypeBinding.resolveTypesFor()->MethodSignatureEnhance.generalizeReturnType()
-    		if (   returnType == TypeBinding.VOID
-    			&& !methodDecl.isGenerated
-    			&& !methodDecl.isCopied
-    			&& !methodDecl.isAbstract())
-    		{
-    			AstGenerator gen = new AstGenerator(methodDecl.bodyEnd, methodDecl.bodyEnd);
-    			if (methodDecl.statements == null) {
-    				methodDecl.setStatements(new Statement[] {
-    					gen.returnStatement(gen.nullLiteral(), true/*synthetic*/)
-    				});
-    			} else {
-	    			// bracket body with:
-	    			// Object _OT$result = null;
-	    			// ... ( meanwhile a BaseCallMessageSend might assign to _OT$result )
-	    			// return _OT$result;
-	    			int len = methodDecl.statements.length;
-	    			Statement[] newStatements = new Statement[len+2];
-	    			System.arraycopy(methodDecl.statements, 0, newStatements, 1, len);
-
-	    			//save source positions from AstGenerator (ike)
-	    	    	SourcePosition savePos = gen.getSourcePosition();
-
-	    			try {
-	    				//set to first line of this method (if any)
-	    				if (len > 0)
-	    					gen.setSourcePosition((((long)methodDecl.statements[0].sourceStart)<<32) + methodDecl.statements[0].sourceEnd);
-
-						//generate local variable (ike)
-						newStatements[0] = gen.localVariable(OT_RESULT, scope.getJavaLangObject(), gen.nullLiteral());
-
-	    			} finally {
-	    				//restore source postions (ike)
-	    				gen.setSourcePosition(savePos);
-					}
-
-	    			newStatements[len+1] = gen.returnStatement(gen.singleNameReference(OT_RESULT), true/*synthetic*/);
-	    			methodDecl.setStatements(newStatements);
-    			}
-    		}
+//    		// assume method had no errors (else it would not have been pushed)
+//    		TypeBinding returnType = MethodModel.getReturnType(methodDecl.binding);
+//    		// return type was already adjusted by SourceTypeBinding.resolveTypesFor()->MethodSignatureEnhance.generalizeReturnType()
+//    		if (   returnType == TypeBinding.VOID
+//    			&& !methodDecl.isGenerated
+//    			&& !methodDecl.isCopied
+//    			&& !methodDecl.isAbstract())
+//    		{
+//    			AstGenerator gen = new AstGenerator(methodDecl.bodyEnd, methodDecl.bodyEnd);
+//    			if (methodDecl.statements == null) {
+//    				methodDecl.setStatements(new Statement[] {
+//    					gen.returnStatement(gen.nullLiteral(), true/*synthetic*/)
+//    				});
+//    			} else {
+//	    			// bracket body with:
+//	    			// Object _OT$result = null;
+//	    			// ... ( meanwhile a BaseCallMessageSend might assign to _OT$result )
+//	    			// return _OT$result;
+//	    			int len = methodDecl.statements.length;
+//	    			Statement[] newStatements = new Statement[len+2];
+//	    			System.arraycopy(methodDecl.statements, 0, newStatements, 1, len);
+//
+//	    			//save source positions from AstGenerator (ike)
+//	    	    	SourcePosition savePos = gen.getSourcePosition();
+//
+//	    			try {
+//	    				//set to first line of this method (if any)
+//	    				if (len > 0)
+//	    					gen.setSourcePosition((((long)methodDecl.statements[0].sourceStart)<<32) + methodDecl.statements[0].sourceEnd);
+//
+//						//generate local variable (ike)
+//						newStatements[0] = gen.localVariable(OT_RESULT, scope.getJavaLangObject(), gen.nullLiteral());
+//
+//	    			} finally {
+//	    				//restore source postions (ike)
+//	    				gen.setSourcePosition(savePos);
+//						}
+//
+//	    			newStatements[len+1] = gen.returnStatement(gen.singleNameReference(OT_RESULT), true/*synthetic*/);
+//	    			methodDecl.setStatements(newStatements);
+//    			}
+//    		}
     	}
     	super.endVisit(methodDecl, scope);
     }

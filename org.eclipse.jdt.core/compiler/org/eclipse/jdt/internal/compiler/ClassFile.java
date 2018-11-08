@@ -51,6 +51,7 @@ import org.eclipse.jdt.internal.compiler.ast.Annotation;
 import org.eclipse.jdt.internal.compiler.ast.AnnotationMethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
+import org.eclipse.jdt.internal.compiler.ast.CallNextInvokeDynamicExpression;
 import org.eclipse.jdt.internal.compiler.ast.ClassLiteralAccess;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.ExportsStatement;
@@ -3398,9 +3399,12 @@ public class ClassFile implements TypeConstants, TypeIds {
 		recordInnerClasses(methodHandlesLookup); // Should be done, it's what javac does also
 		ReferenceBinding javaLangInvokeLambdaMetafactory = this.referenceBinding.scope.getJavaLangInvokeLambdaMetafactory(); 
 		
+		ReferenceBinding objectTeamsCallNextBootstrap = this.referenceBinding.scope.getOrgObjectteamsCallinBoostrap();
+		
 		// Depending on the complexity of the expression it may be necessary to use the altMetafactory() rather than the metafactory()
 		int indexForMetaFactory = 0;
 		int indexForAltMetaFactory = 0;
+		int indexForCallNext = 0;
 
 		int numberOfBootstraps = functionalExpressionList.size();
 		int localContentsOffset = this.contentsOffset;
@@ -3424,6 +3428,43 @@ public class ClassFile implements TypeConstants, TypeIds {
 		this.contents[localContentsOffset++] = (byte) (numberOfBootstraps >> 8);
 		this.contents[localContentsOffset++] = (byte) numberOfBootstraps;
 		for (int i = 0; i < numberOfBootstraps; i++) {
+			
+			if(functionalExpressionList.get(i) instanceof CallNextInvokeDynamicExpression) {
+				CallNextInvokeDynamicExpression expr = (CallNextInvokeDynamicExpression) functionalExpressionList.get(i);
+				
+				if (contentsEntries + localContentsOffset >= this.contents.length) {
+					resizeContents(contentsEntries);
+				}
+				
+				char[] SIGNATURE = "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;II)Ljava/lang/invoke/CallSite;".toCharArray(); //$NON-NLS-1$
+				char[] NAME = "callNext".toCharArray(); //$NON-NLS-1$
+				
+				if(indexForCallNext == 0) {
+					indexForCallNext = this.constantPool.literalIndexForMethodHandle(ClassFileConstants.MethodHandleRefKindInvokeStatic, objectTeamsCallNextBootstrap, 
+						NAME, SIGNATURE, false);
+				}
+				
+				this.contents[localContentsOffset++] = (byte) (indexForCallNext >> 8);
+				this.contents[localContentsOffset++] = (byte) indexForCallNext;
+				
+				// u2 num_bootstrap_arguments
+				this.contents[localContentsOffset++] = 0;
+				this.contents[localContentsOffset++] = (byte) 3;
+				
+				int functionalDescriptorIndex = this.constantPool.literalIndexForMethodType(expr.binding.original().signature());
+				this.contents[localContentsOffset++] = (byte) (functionalDescriptorIndex >> 8);
+				this.contents[localContentsOffset++] = (byte) functionalDescriptorIndex;
+	
+				int methodHandleIndex = this.constantPool.literalIndexForMethodHandle(expr.binding.original()); // Speak of " implementation" (erased) version here, adaptations described below.
+				this.contents[localContentsOffset++] = (byte) (methodHandleIndex >> 8);
+				this.contents[localContentsOffset++] = (byte) methodHandleIndex;
+	
+				char [] instantiatedSignature = expr.binding.signature();
+				int methodTypeIndex = this.constantPool.literalIndexForMethodType(instantiatedSignature);
+				this.contents[localContentsOffset++] = (byte) (methodTypeIndex >> 8);
+				this.contents[localContentsOffset++] = (byte) methodTypeIndex;				
+			} else {
+			
 			FunctionalExpression functional = (FunctionalExpression) functionalExpressionList.get(i);
 			MethodBinding [] bridges = functional.getRequiredBridges();
 			TypeBinding[] markerInterfaces = null;
@@ -3534,6 +3575,7 @@ public class ClassFile implements TypeConstants, TypeIds {
 				this.contents[localContentsOffset++] = (byte) (methodTypeIndex >> 8);
 				this.contents[localContentsOffset++] = (byte) methodTypeIndex;				
 			}
+		}
 		}
 
 		int attributeLength = localContentsOffset - attributeLengthPosition - 4;
@@ -5773,7 +5815,26 @@ public class ClassFile implements TypeConstants, TypeIds {
 		// Record which bootstrap method was assigned to the expression
 		return expression.bootstrapMethodNumber = this.bootstrapMethods.size() - 1;
 	}
-
+	
+	public int recordBootstrapMethod(CallNextInvokeDynamicExpression reference) {
+		if(this.bootstrapMethods == null) {
+			this.bootstrapMethods = new ArrayList();
+		}
+		
+		for(int i = 0; i < this.bootstrapMethods.size(); i++) {
+			Object expression = this.bootstrapMethods.get(i);
+			if(expression instanceof CallNextInvokeDynamicExpression) {
+				CallNextInvokeDynamicExpression bref = (CallNextInvokeDynamicExpression) expression;
+				if(bref.equals(reference)) {
+					return i;
+				}
+			}
+		}
+		
+		this.bootstrapMethods.add(reference);
+		return this.bootstrapMethods.size() -1;
+	}
+	
 	public void reset(/*@Nullable*/SourceTypeBinding typeBinding, CompilerOptions options) {
 		// the code stream is reinitialized for each method
 		if (typeBinding != null) {

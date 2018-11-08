@@ -20,7 +20,6 @@
  **********************************************************************/
 package org.eclipse.objectteams.otdt.internal.core.compiler.ast;
 
-import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
@@ -74,24 +73,25 @@ public class BaseReference extends ThisReference {
 			WeavingScheme weavingScheme)
 	{
 		boolean redirectToTeam = isStatic || (weavingScheme == WeavingScheme.OTDRE); // _OT$callNext is found via MyTeam.this
-		final char[] dynamicCallinBootstrapTypeName = "org.eclipse.objectteams.otredyn.runtime.dynamic.CallinBootstrap".toCharArray(); //$NON-NLS-1$
 		
 		if (outerCallinMethod != null) {
 			// use "R.this" in order to point to the correct class, direct enclosing is a local class.
 	        ReferenceBinding enclosingRole = outerCallinMethod.binding.declaringClass;
-	        ReferenceBinding receiverType = redirectToTeam?
-						        				enclosingRole.enclosingType() :
-						        				enclosingRole;
+//	        ReferenceBinding receiverType = redirectToTeam?
+//						        				enclosingRole.enclosingType() :
+//						        				enclosingRole;
 						        				
-			//this._wrappee = gen.qualifiedThisReference(gen.singleTypeReference(receiverType.internalName()));
-			this._wrappee = gen.qualifiedTypeReference(CharOperation.splitOn('.', dynamicCallinBootstrapTypeName));//new char[][] { dynamicCallinBootstrapTypeName });
+			this._wrappee = gen.singleTypeReference(enclosingRole.internalName());
+//			this._wrappee = gen.qualifiedTypeReference(enclosingRole.baseclass.compoundName); //gen.qualifiedTypeReference(CharOperation.splitOn('.', baseCallTypeName));//new char[][] { dynamicCallinBootstrapTypeName });
 	        return enclosingRole;
+	        
 		} else if (redirectToTeam) {
 			// use MyTeam.this:
+			//TODO Lars
 	        ReferenceBinding receiverType = enclosingType.enclosingType();
 	        if (receiverType != null) // null happens when callin method is not inside a role
-	        	//this._wrappee = gen.qualifiedThisReference(receiverType);
-	        	this._wrappee = gen.qualifiedTypeReference(CharOperation.splitOn('.', dynamicCallinBootstrapTypeName)); //new char[][] { dynamicCallinBootstrapTypeName });
+	        	this._wrappee = gen.qualifiedThisReference(receiverType);
+//	        	this._wrappee = //gen.qualifiedTypeReference(CharOperation.splitOn('.', baseCallTypeName)); //new char[][] { dynamicCallinBootstrapTypeName });
 		}
 		return enclosingType;
 	}
@@ -150,5 +150,13 @@ public class BaseReference extends ThisReference {
 	public boolean isQualified() {
 		return true;
 		//return (this._wrappee instanceof QualifiedThisReference);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(obj instanceof BaseReference) {
+			return ((BaseReference) obj)._wrappee == this._wrappee;
+		}
+		return super.equals(obj);
 	}
 }

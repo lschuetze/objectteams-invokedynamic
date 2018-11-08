@@ -102,7 +102,6 @@ import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.SyntheticRoleF
 import org.eclipse.objectteams.otdt.internal.core.compiler.model.*;
 import org.eclipse.objectteams.otdt.internal.core.compiler.model.MethodModel.FakeKind;
 import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.copyinheritance.CopyInheritance;
-import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.transformer.MethodSignatureEnhancer;
 import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.transformer.PredicateGenerator;
 import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.transformer.RoleMigrationImplementor;
 import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.transformer.RoleSplitter;
@@ -2534,9 +2533,9 @@ private MethodBinding resolveTypesWithSuspendedTempErrorHandlingPolicy(MethodBin
 
 //{ObjectTeams: enhance callin signature (previously done in the parser):
 	if (methodDecl.isCallin() && !methodDecl.isCopied) {
-		AstGenerator gen = new AstGenerator(methodDecl.sourceEnd+1, methodDecl.sourceEnd+2);
-		methodDecl.arguments = MethodSignatureEnhancer.enhanceArguments(
-								methodDecl.arguments, new char[0], /*isWrapper*/false, gen, this.scope.compilerOptions().weavingScheme);
+//		AstGenerator gen = new AstGenerator(methodDecl.sourceEnd+1, methodDecl.sourceEnd+2);
+//		methodDecl.arguments = MethodSignatureEnhancer.enhanceArguments(
+//								methodDecl.arguments, new char[0], /*isWrapper*/false, gen, this.scope.compilerOptions().weavingScheme);
 	}
 
 	// pre-fetch (resolve) potential type anchors:
@@ -2780,7 +2779,7 @@ private MethodBinding resolveTypesWithSuspendedTempErrorHandlingPolicy(MethodBin
 			} else {
 //{ObjectTeams: generalize return of callin method?
 				if (method.isCallin() && methodType.isBaseType())
-					methodType = MethodSignatureEnhancer.generalizeReturnType((MethodDeclaration)methodDecl, methodType);
+//					methodType = MethodSignatureEnhancer.generalizeReturnType((MethodDeclaration)methodDecl, methodType);
 // SH}
 				if ((methodType.tagBits & TagBits.HasMissingType) != 0) {
 					method.tagBits |= TagBits.HasMissingType;

@@ -612,9 +612,13 @@ public void generateCode(BlockScope currentScope, CodeStream codeStream, boolean
 		Object[] path = currentScope.getEmulationPath(targetType, true /*only exact match*/, false/*consider enclosing arg*/);
 		codeStream.generateOuterAccess(path, this, targetType, currentScope);
 	} else {
-		this.receiver.generateCode(currentScope, codeStream, true);
-		if ((this.bits & NeedReceiverGenericCast) != 0) {
-			codeStream.checkcast(this.actualReceiverType);
+		if(this.receiver instanceof BaseReference) {
+//			NOP - we generate an invokedynamic
+		} else {
+			this.receiver.generateCode(currentScope, codeStream, true);
+			if ((this.bits & NeedReceiverGenericCast) != 0) {
+				codeStream.checkcast(this.actualReceiverType);
+			}
 		}
 	}
 //{ObjectTeams: various synthetic arguments for static role methods:
@@ -650,6 +654,15 @@ public void generateCode(BlockScope currentScope, CodeStream codeStream, boolean
 	// generate arguments
 	generateArguments(this.binding, this.arguments, currentScope, codeStream);
 	pc = codeStream.position;
+	
+	if(this.receiver instanceof BaseReference) {
+		CallNextInvokeDynamicExpression expr = new CallNextInvokeDynamicExpression((BaseReference)this.receiver, this.binding, codegenBinding.parameters);
+		final int bootStrapIndex = codeStream.classFile.recordBootstrapMethod(expr);
+		final char[] bootstrapSelector = "callNext".toCharArray(); //$NON-NLS-1$
+		final int bootstrapArgumentCount = 5;
+		codeStream.invokeDynamic(bootStrapIndex, bootstrapArgumentCount, 1, bootstrapSelector, codegenBinding.signature()); 
+	} else {
+	
 	// actual message invocation
 	if (this.syntheticAccessor == null){
 		TypeBinding constantPoolDeclaringClass = CodeStream.getConstantPoolDeclaringClass(currentScope, codegenBinding, this.actualReceiverType, this.receiver.isImplicitThis());
@@ -681,6 +694,8 @@ public void generateCode(BlockScope currentScope, CodeStream codeStream, boolean
 		}
 	} else {
 		codeStream.invoke(Opcodes.OPC_invokestatic, this.syntheticAccessor, null /* default declaringClass */, this.typeArguments);
+	}
+	
 	}
 	// required cast must occur even if no value is required
 	if (this.valueCast != null) codeStream.checkcast(this.valueCast);

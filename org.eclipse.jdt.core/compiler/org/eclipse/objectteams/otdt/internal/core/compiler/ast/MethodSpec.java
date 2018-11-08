@@ -292,7 +292,7 @@ public class MethodSpec extends ASTNode implements InvocationSite
 		if (this.hasSignature) {
    	    	TypeBinding[] enhancedParameters = this.parameters;
    	    	// first chance: try enhanced:
-			enhancedParameters = MethodSignatureEnhancer.enhanceParameters(scope, this.parameters);
+//			enhancedParameters = MethodSignatureEnhancer.enhanceParameters(scope, this.parameters);
    	    	CompilationResult compilationResult = scope.referenceContext().compilationResult();
 			CheckPoint cp = compilationResult.getCheckPoint(scope.referenceContext());
 			

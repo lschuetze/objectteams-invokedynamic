@@ -92,7 +92,6 @@ import org.eclipse.objectteams.otdt.internal.core.compiler.model.TeamModel;
 import org.eclipse.objectteams.otdt.internal.core.compiler.smap.SourcePosition;
 import org.eclipse.objectteams.otdt.internal.core.compiler.smap.StepOverSourcePosition;
 import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.transformer.AbstractStatementsGenerator;
-import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.transformer.MethodSignatureEnhancer;
 import org.eclipse.objectteams.otdt.internal.core.compiler.statemachine.transformer.PredicateGenerator;
 import org.eclipse.objectteams.otdt.internal.core.compiler.util.AstClone;
 import org.eclipse.objectteams.otdt.internal.core.compiler.util.AstConverter;
@@ -351,12 +350,12 @@ public class CallinImplementor extends MethodMappingImplementor
 		boolean isReturnBoxed = false; // has a basic type been converted to "Object"?
 		TypeBinding baseReturnType = baseMethodSpec.resolvedMethod.returnType;
 		if (callinBindingDeclaration.isReplaceCallin()) {
-			arguments = MethodSignatureEnhancer.enhanceArguments(
-								arguments,
-								new char[0],
-								true, // isWrapper
-								gen,
-								this._role.getWeavingScheme());
+//			arguments = MethodSignatureEnhancer.enhanceArguments(
+//								arguments,
+//								new char[0],
+//								true, // isWrapper
+//								gen,
+//								this._role.getWeavingScheme());
 			if (wrapperReturnType.isBaseType()) {
 				TypeBinding baseReturn = baseReturnType;
 				isReturnBoxed = (baseReturn.isBaseType() && baseReturn != TypeBinding.VOID);

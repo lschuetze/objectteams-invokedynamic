@@ -23,9 +23,7 @@ import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.AbstractMethodDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.Expression;
-import org.eclipse.jdt.internal.compiler.ast.IntLiteral;
 import org.eclipse.jdt.internal.compiler.ast.MessageSend;
 import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
 import org.eclipse.jdt.internal.compiler.flow.FlowContext;
@@ -42,14 +40,10 @@ import org.eclipse.jdt.internal.compiler.lookup.ReferenceBinding;
 import org.eclipse.jdt.internal.compiler.lookup.Scope;
 import org.eclipse.jdt.internal.compiler.lookup.SourceTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
-import org.eclipse.jdt.internal.compiler.lookup.TypeConstants;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
 import org.eclipse.objectteams.otdt.core.compiler.IOTConstants;
 import org.eclipse.objectteams.otdt.core.exceptions.InternalCompilerError;
-import org.eclipse.objectteams.otdt.internal.core.compiler.lifting.Lowering;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.SyntheticBaseCallSurrogate;
-import org.eclipse.objectteams.otdt.internal.core.compiler.mappings.CallinImplementorDyn;
-//import org.eclipse.objectteams.otdt.internal.core.compiler.mappings.CallinImplementorDyn;
 import org.eclipse.objectteams.otdt.internal.core.compiler.model.MethodModel;
 import org.eclipse.objectteams.otdt.internal.core.compiler.problem.BaseCallProblemReporterWrapper;
 import org.eclipse.objectteams.otdt.internal.core.compiler.problem.BlockScopeWrapper;
@@ -109,57 +103,58 @@ public class BaseCallMessageSend extends AbstractExpressionWrapper
 		// insert it at front of regular arguments to it will end up between normal enhancement args and regular args.
 		// (note that this arg may be removed again if current callin method is static,
 		//       see TransformStatementsVisitor#visit(MessageSend,BlockScope))
-		Expression[] args = this._sendOrig.arguments;
-		this.sourceArgs = args;
-		int len = 0;
-		int extra = weavingScheme == WeavingScheme.OTRE ? 1 : 0;
-		if (args == null) {
-			args = new Expression[extra];
-		} else {
-			len = args.length;
-			System.arraycopy(args, 0, args=new Expression[len+extra], extra, len);
-		}
-		if (weavingScheme == WeavingScheme.OTRE) {
-			// insert before regular args:
-			args[0] = new AstGenerator(this).booleanLiteral(this.isSuperAccess);
-		} else {
+//		Expression[] args = this._sendOrig.arguments;
+//		this.sourceArgs = args;
+//		int len = 0;
+//		int extra = weavingScheme == WeavingScheme.OTRE ? 1 : 0;
+//		if (args == null) {
+//			args = new Expression[extra];
+//		} else {
+//			len = args.length;
+//			System.arraycopy(args, 0, args=new Expression[len+extra], extra, len);
+//		}
+//		if (weavingScheme == WeavingScheme.OTRE) {
+//			// insert before regular args:
+//			args[0] = new AstGenerator(this).booleanLiteral(this.isSuperAccess);
+//		}
+//		else {
 			// translate & pack arguments and append baseCallFlags:
-			AstGenerator gen = new AstGenerator(this);
-			IntLiteral baseCallFlags = gen.intLiteral(this.isSuperAccess ? 2 : 1);
-			if (args.length == 0) {
-				args = new Expression[] { gen.nullLiteral(), baseCallFlags };
-			} else {
-				int enhLen = MethodSignatureEnhancer.getEnhancingArgLen(weavingScheme);
-				if (enclosingMethod.arguments.length - enhLen != args.length) {
-					scope.problemReporter().baseCallDoesntMatchRoleMethodSignature(this);
-					return;
-				}
-				Expression[] boxedArgs = new Expression[args.length];
-				for (int i = 0; i < args.length; i++) {
-					Argument argument = enclosingMethod.arguments[i+enhLen];
-					TypeBinding argTypeBinding = argument.binding.type;
-					if (argTypeBinding.isBaseType()) {
-						boxedArgs[i] = gen.createBoxing(args[i], (BaseTypeBinding) argTypeBinding);
-						continue;
-					} else if (argument.type.isDeclaredLifting()) {
-						LiftingTypeReference ltr = (LiftingTypeReference)argument.type;
-						if (ltr.roleReference.resolvedType != null) {
-							Expression teamThis = gen.qualifiedThisReference(enclosingMethod.binding.declaringClass.enclosingType());
-							boxedArgs[i] = new Lowering().lowerExpression(scope, args[i],
-											ltr.roleReference.resolvedType, ltr.resolvedType, teamThis, true, true);
-								continue;
-						}
-						// fall through
-					}
-					boxedArgs[i] = args[i];
-				}
-				args = new Expression[] {
-					gen.arrayAllocation(gen.qualifiedTypeReference(TypeConstants.JAVA_LANG_OBJECT), 1, boxedArgs),
-					baseCallFlags
-				};
-			}
-		}
-		this._sendOrig.arguments = args;
+//			AstGenerator gen = new AstGenerator(this);
+//			IntLiteral baseCallFlags = gen.intLiteral(this.isSuperAccess ? 2 : 1);
+//			if (args.length == 0) {
+//				args = new Expression[] { gen.nullLiteral(), baseCallFlags };
+//			} else {
+//				int enhLen = MethodSignatureEnhancer.getEnhancingArgLen(weavingScheme);
+//				if (enclosingMethod.arguments.length - enhLen != args.length) {
+//					scope.problemReporter().baseCallDoesntMatchRoleMethodSignature(this);
+//					return;
+//				}
+//				Expression[] boxedArgs = new Expression[args.length];
+//				for (int i = 0; i < args.length; i++) {
+//					Argument argument = enclosingMethod.arguments[i+enhLen];
+//					TypeBinding argTypeBinding = argument.binding.type;
+//					if (argTypeBinding.isBaseType()) {
+//						boxedArgs[i] = gen.createBoxing(args[i], (BaseTypeBinding) argTypeBinding);
+//						continue;
+//					} else if (argument.type.isDeclaredLifting()) {
+//						LiftingTypeReference ltr = (LiftingTypeReference)argument.type;
+//						if (ltr.roleReference.resolvedType != null) {
+//							Expression teamThis = gen.qualifiedThisReference(enclosingMethod.binding.declaringClass.enclosingType());
+//							boxedArgs[i] = new Lowering().lowerExpression(scope, args[i],
+//											ltr.roleReference.resolvedType, ltr.resolvedType, teamThis, true, true);
+//								continue;
+//						}
+//						// fall through
+//					}
+//					boxedArgs[i] = args[i];
+//				}
+//				args = new Expression[] {
+//					gen.arrayAllocation(gen.qualifiedTypeReference(TypeConstants.JAVA_LANG_OBJECT), 1, boxedArgs),
+//					baseCallFlags
+//				};
+//			}
+//		}
+//		this._sendOrig.arguments = args;
 		this._weavingScheme = weavingScheme;
 	}
 
@@ -230,7 +225,7 @@ public class BaseCallMessageSend extends AbstractExpressionWrapper
 		
 		// selector:
 		if (weavingScheme == WeavingScheme.OTDRE) {
-			wrappedSend.selector = CallinImplementorDyn.OT_CALL_NEXT;
+//			wrappedSend.selector = ; //CallinImplementorDyn.OT_CALL_NEXT;
 		} else {
 			wrappedSend.selector = SyntheticBaseCallSurrogate.genSurrogateName(wrappedSend.selector, roleType.sourceName(), isStatic);
 		}
@@ -240,16 +235,16 @@ public class BaseCallMessageSend extends AbstractExpressionWrapper
     	// return type:
 		TypeBinding returnType = MethodModel.getReturnType(callinMethodBinding);
 		boolean resultTunneling = false;
-		if (returnType != null) {
-			if (returnType.isPrimitiveType()) {
-				this._wrappee = gen.createUnboxing(this._wrappee, (BaseTypeBinding)returnType);
-			} else if (TypeBinding.equalsEquals(returnType, TypeBinding.VOID) && callinMethodDecl == scope.methodScope().referenceMethod()) {
-				// store value which is not used locally but has to be chained to the caller.
-				// (cannot set result in outer callin method!)
-				this._wrappee = gen.assignment(gen.singleNameReference(IOTConstants.OT_RESULT), this._wrappee);
-				resultTunneling = true;
-			}
-		}
+//		if (returnType != null) {
+//			if (returnType.isPrimitiveType()) {
+//				this._wrappee = gen.createUnboxing(this._wrappee, (BaseTypeBinding)returnType);
+//			} else if (TypeBinding.equalsEquals(returnType, TypeBinding.VOID) && callinMethodDecl == scope.methodScope().referenceMethod()) {
+//				// store value which is not used locally but has to be chained to the caller.
+//				// (cannot set result in outer callin method!)
+//				this._wrappee = gen.assignment(gen.singleNameReference(IOTConstants.OT_RESULT), this._wrappee);
+//				resultTunneling = true;
+//			}
+//		}
 
 		BlockScopeWrapper baseCallScope = new BlockScopeWrapper(scope, this);
 		super.resolveType(baseCallScope);

@@ -3142,6 +3142,12 @@ public abstract class Scope {
 		unitScope.recordQualifiedReference(IOTConstants.ORG_OBJECTTEAMS_TEAM);
 		return unitScope.environment.getResolvedType(IOTConstants.ORG_OBJECTTEAMS_TEAM, this);
 	}
+	public final ReferenceBinding getOrgObjectteamsCallinBoostrap() {
+		CompilationUnitScope unitScope = compilationUnitScope();
+		char[][] CALLINBOOTSTRAP = CharOperation.splitOn('.', "org.eclipse.objectteams.otredyn.runtime.dynamic.CallinBootstrap".toCharArray()); //$NON-NLS-1$
+		unitScope.recordQualifiedReference(CALLINBOOTSTRAP);
+		return unitScope.environment.getResolvedType(CALLINBOOTSTRAP, this);
+	}
 	public final boolean isOrgObjectteamsTeam(TypeBinding tb) {
 		// if org.objectteams.Team is not resolvable, don't report
 		// an error, otherwise we can't compile plain-java programs

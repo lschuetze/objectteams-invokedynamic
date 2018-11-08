@@ -85,7 +85,7 @@ public class MethodSignatureEnhancer implements IOTConstants, TypeConstants, Cla
 
 	/** Length of the sublist of enhancing arguments. */
 	public final int ENHANCING_ARG_LEN;
-	public final char[] UNUSED_ARGS;
+	public final char[] UNUSED_ARGS = new char[0];
 	
 	public static MethodSignatureEnhancer[] variants = new MethodSignatureEnhancer[WeavingScheme.values().length];
 	
@@ -102,18 +102,18 @@ public class MethodSignatureEnhancer implements IOTConstants, TypeConstants, Cla
 	private MethodSignatureEnhancer(WeavingScheme weavingScheme) {
 		this.weavingScheme = weavingScheme;
 		if (weavingScheme == WeavingScheme.OTDRE) {
-			this.ENHANCING_ARG_NAMES = new char[][] {
+			this.ENHANCING_ARG_NAMES = new char[0][0]; // {
 				// invdyn args begin
-					"lookup".toCharArray(),
-					"name".toCharArray(),
-					"type".toCharArray(),
+//					"lookup".toCharArray(),
+//					"name".toCharArray(),
+//					"type".toCharArray(),
 				// invdyn args end
-					"_OT$baseArg".toCharArray(), 
-					"_OT$teams".toCharArray(), 
-					"_OT$index".toCharArray(),
-					"_OT$callinIds".toCharArray(),
-					"_OT$boundMethodId".toCharArray(),
-					"_OT$args".toCharArray()};
+//					"_OT$baseArg".toCharArray(), 
+//					"_OT$teams".toCharArray(), 
+//					"_OT$index".toCharArray(),
+//					"_OT$callinIds".toCharArray(),
+//					"_OT$boundMethodId".toCharArray(),
+//					"_OT$args".toCharArray() };
   // {OT/JamVM support:
 		} else if (JAMVM_ASPECTBI) {
 			this.ENHANCING_ARG_NAMES = new char[][] {
@@ -132,7 +132,7 @@ public class MethodSignatureEnhancer implements IOTConstants, TypeConstants, Cla
 					"_OT$unusedArgs".toCharArray() };
 		}
 		this.ENHANCING_ARG_LEN = this.ENHANCING_ARG_NAMES.length;
-		this.UNUSED_ARGS = this.ENHANCING_ARG_NAMES[this.ENHANCING_ARG_LEN-1];
+//		this.UNUSED_ARGS = this.ENHANCING_ARG_NAMES[this.ENHANCING_ARG_LEN-1];
 	}
 // SH}
 	
@@ -142,16 +142,16 @@ public class MethodSignatureEnhancer implements IOTConstants, TypeConstants, Cla
 		if (scope.compilerOptions().weavingScheme == WeavingScheme.OTDRE)
 			return new TypeBinding[] {
 				// invdyn args start
-				scope.getType(IOTConstants.MH_LOOKUP, 5),
-				scope.getType(IOTConstants.STRING, 3),
-				scope.getType(IOTConstants.INVOKE_METHODTYPE, 4),
+//				scope.getType(IOTConstants.MH_LOOKUP, 5),
+//				scope.getType(IOTConstants.STRING, 3),
+//				scope.getType(IOTConstants.INVOKE_METHODTYPE, 4),
 				// invdyn args end
-				scope.getType(IOTConstants.ORG_OBJECTTEAMS_IBOUNDBASE2, 3), 	// _OT$baseArg
-				scope.createArrayType(scope.getOrgObjectteamsITeam(), 1),  		// _OT$teams
-				TypeBinding.INT,    	                               	 		// _OT$index
-				scope.createArrayType(TypeBinding.INT, 1),         		 		// _OT$callinIds
-				TypeBinding.INT,   	                                	 		// _OT$boundMethodId 
-				scope.createArrayType(scope.getJavaLangObject(), 1), 	 		// _OT$args				
+//				scope.getType(IOTConstants.ORG_OBJECTTEAMS_IBOUNDBASE2, 3), 	// _OT$baseArg
+//				scope.createArrayType(scope.getOrgObjectteamsITeam(), 1),  		// _OT$teams
+//				TypeBinding.INT,    	                               	 		// _OT$index
+//				scope.createArrayType(TypeBinding.INT, 1),         		 		// _OT$callinIds
+//				TypeBinding.INT,   	                                	 		// _OT$boundMethodId 
+//				scope.createArrayType(scope.getJavaLangObject(), 1), 	 		// _OT$args				
 			};
 // SH}
 // {OT/JamVM support:
