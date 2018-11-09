@@ -101,7 +101,6 @@ public abstract class AbstractTransformableClassNode extends ClassNode {
 		InsnList instructions = new InsnList();
 		switch (returnType.getSort()) {
 		case Type.VOID:
-			instructions.add(new InsnNode(Opcodes.POP));
 			instructions.add(new InsnNode(Opcodes.RETURN));
 			break;
 		case Type.ARRAY: // fallthrough

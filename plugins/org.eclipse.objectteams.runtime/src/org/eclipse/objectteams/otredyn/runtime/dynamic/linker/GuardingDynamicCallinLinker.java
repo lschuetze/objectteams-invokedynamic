@@ -21,8 +21,10 @@ import jdk.dynalink.linker.LinkRequest;
 import jdk.dynalink.linker.LinkerServices;
 
 public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
-
-	private final static boolean DEBUGGING = true;
+	
+	private static final MethodHandle MH_GET_TEAMS = getTeams();
+	
+	private static final MethodHandle MH_GET_CALLINIDS = getCallinIds();
 
 	@Override
 	public GuardedInvocation getGuardedInvocation(LinkRequest linkRequest, LinkerServices linkerServices)
@@ -76,22 +78,20 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 		MethodHandle replace = null;
 
 		HashSet<IBinding> processedBindings = new HashSet<>();
-		boolean processing = true;
+		boolean stopSearch = false;
 
 		for (ITeam currentTeam : teams) {
-
 			List<IBinding> sortedCallinBindings = TeamManager.getPrecedenceSortedCallinBindings(currentTeam,
 					desc.getJoinpointDescriptor());
 			sortedCallinBindings.removeIf(processedBindings::contains);
 			
 			for (IBinding binding : sortedCallinBindings) {
-
 				processedBindings.add(binding);
 
 				MethodHandle roleMethod = ObjectTeamsLookup.findRoleMethod(desc.getLookup(), binding, currentTeam);
 				//System.out.println("BEFORE: " + roleMethod);
-				if(binding.getCallinModifier() == CallinModifier.REPLACE)
-					roleMethod = MethodHandles.insertArguments(roleMethod, 1, null, null, null);
+//				if(binding.getCallinModifier() == CallinModifier.REPLACE)
+//					roleMethod = MethodHandles.insertArguments(roleMethod, 1, desc.getLookup(), "moep", desc.getMethodType());
 				//System.out.println("AFTER: " + roleMethod);
 				MethodHandle liftRoleHandle = ObjectTeamsLookup.findLifting(desc.getLookup(), binding,
 						currentTeam.getClass());
@@ -99,9 +99,6 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 
 				switch (binding.getCallinModifier()) {
 				case BEFORE:
-					if (!processing) {
-						break;
-					}
 					MethodHandle beforeHandle = resolveBeforeAfterCAllin(roleMethod, liftRole);
 					beforeComposition = (beforeComposition == null) ? beforeHandle
 							: MethodHandles.foldArguments(beforeComposition, beforeHandle);
@@ -113,14 +110,19 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 							: MethodHandles.foldArguments(afterComposition, afterHandle);
 					break;
 
-				case REPLACE:
-					if (replace != null && !processing) {
-						break;
-					}
+				case REPLACE:	
 					replace = resolveReplaceCallin(baseMethodType, teams, callinIds, roleMethod, liftRole);
-					processing = false;
+					stopSearch = true;
 					break;
 				}
+				// Check if we found a callin
+				if(stopSearch) {
+					break;
+				}
+			}
+			// Check if we found a callin
+			if(stopSearch) {
+				break;
 			}
 		}
 
@@ -131,11 +133,10 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 		if (beforeComposition != null) {
 			compositionHandle = MethodHandles.foldArguments(compositionHandle, beforeComposition);
 		}
+		
 		if (afterComposition != null) {
-			MethodType oldType = compositionHandle.type();
-			compositionHandle = compositionHandle.asType(oldType.changeReturnType(void.class));
-			compositionHandle = MethodHandles.foldArguments(afterComposition, compositionHandle);
-			compositionHandle = compositionHandle.asType(oldType);
+			// if compositionHandle returns a value it need to be ignored and stored for later
+//			compositionHandle = MethodHandles.foldArguments(afterComposition, compositionHandle);
 		}
 
 		// TODO: Share a switchpoint for a joinpointid ?
@@ -146,36 +147,51 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 
 	private MethodHandle resolveBeforeAfterCAllin(MethodHandle roleMethod, MethodHandle liftRole) {
 		final MethodHandle adapted = MethodHandles.filterArguments(roleMethod, 0, liftRole);
-		final MethodHandle reduced = MethodHandles.dropArguments(adapted, 1, int.class, Object[].class);
-		return reduced;
+//		final MethodHandle reduced = MethodHandles.dropArguments(adapted, 1, int.class, Object[].class);
+		return adapted;
 	}
 
 	private MethodHandle resolveReplaceCallin(MethodType baseMethodType, ITeam[] teams, int[] callinIds,
 			MethodHandle roleMethod, MethodHandle liftRole) {
 		// If there is a replace callin we will need to centrally store the callin
 		// context (teams[], callinIds[]) for that callsite.
-		final MethodHandle reducedRoleMethod = MethodHandles.insertArguments(roleMethod, 2, teams, 0, callinIds);
-		MethodHandle adaptedReplace = MethodHandles.filterArguments(reducedRoleMethod, 0, liftRole);
-		MethodType doubleBaseType = baseMethodType.insertParameterTypes(0, baseMethodType.parameterType(0));
+//		final MethodHandle reducedRoleMethod = MethodHandles.insertArguments(roleMethod, 2, teams, 0, callinIds);
+		MethodHandle adaptedReplace = MethodHandles.filterArguments(roleMethod, 0, liftRole);
+		return adaptedReplace;
+//		MethodType doubleBaseType = baseMethodType.insertParameterTypes(0, baseMethodType.parameterType(0));
 
-		if (reducedRoleMethod.type().parameterCount() > 4) {
-			final int spreadCount = reducedRoleMethod.type().parameterCount() - 4;
-			final int dropEnd = adaptedReplace.type().parameterCount();
-			final int dropBegin = dropEnd - spreadCount;
-
-			adaptedReplace = adaptedReplace.asSpreader(Object[].class, spreadCount);
-			adaptedReplace = MethodHandles.permuteArguments(adaptedReplace,
-					adaptedReplace.type().dropParameterTypes(dropBegin, dropEnd), 0, 1, 2, 3, 3);
-		}
+//		if (roleMethod.type().parameterCount() > 4) {
+//			final int spreadCount = roleMethod.type().parameterCount() - 4;
+//			final int dropEnd = adaptedReplace.type().parameterCount();
+//			final int dropBegin = dropEnd - spreadCount;
+//
+//			adaptedReplace = adaptedReplace.asSpreader(Object[].class, spreadCount);
+//			adaptedReplace = MethodHandles.permuteArguments(adaptedReplace,
+//					adaptedReplace.type().dropParameterTypes(dropBegin, dropEnd), 0, 1, 2, 3, 3);
+//		}
 		// TODO: Maybe also need to add if there is a mappng
 		// Cast the first two parameters from (BaseClass, IBoundBase2) -> (BaseClass,
 		// BaseClass) as BaseClass implements IBoundBase2.
 		// TODO: Implement as TypeConverter see
 		// https://docs.oracle.com/javase/9/docs/api/jdk/dynalink/linker/GuardingTypeConverterFactory.html
-		MethodHandle doubledFirstParamOfBaseMethodHandle = adaptedReplace.asType(doubleBaseType);
+//		MethodHandle doubledFirstParamOfBaseMethodHandle = adaptedReplace.asType(doubleBaseType);
 		// The base object needs to be given twice, as the first one will be converted
 		// into the corresponding role object that is played by that base object.
-		return MethodHandles.permuteArguments(doubledFirstParamOfBaseMethodHandle, baseMethodType, 0, 0, 1, 2);
+//		final int[] reordering = new int[doubleBaseType.parameterCount()];
+//		reordering[0] = 0;
+//		reordering[1] = 0;
+//		for(int i = 1; i < reordering.length; i++) {
+//			reordering[i+1] = i;
+//		}
+//		return MethodHandles.permuteArguments(adaptedReplace, doubleBaseType, reordering);
+	}
+	
+	private static MethodHandle getTeams() {
+		return null;
+	}
+	
+	private static MethodHandle getCallinIds() {
+		return null;
 	}
 
 }

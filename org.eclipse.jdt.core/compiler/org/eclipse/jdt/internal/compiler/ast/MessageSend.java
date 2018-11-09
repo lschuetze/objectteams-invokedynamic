@@ -656,11 +656,11 @@ public void generateCode(BlockScope currentScope, CodeStream codeStream, boolean
 	pc = codeStream.position;
 	
 	if(this.receiver instanceof BaseReference) {
-		CallNextInvokeDynamicExpression expr = new CallNextInvokeDynamicExpression((BaseReference)this.receiver, this.binding, codegenBinding.parameters);
+		CallNextInvokeDynamicExpression expr = new CallNextInvokeDynamicExpression((BaseReference)this.receiver, this.binding, codegenBinding);
 		final int bootStrapIndex = codeStream.classFile.recordBootstrapMethod(expr);
 		final char[] bootstrapSelector = "callNext".toCharArray(); //$NON-NLS-1$
 		final int bootstrapArgumentCount = 5;
-		codeStream.invokeDynamic(bootStrapIndex, bootstrapArgumentCount, 1, bootstrapSelector, codegenBinding.signature()); 
+		codeStream.invokeDynamic(bootStrapIndex, codegenBinding.parameters.length, 1, bootstrapSelector, codegenBinding.signature()); 
 	} else {
 	
 	// actual message invocation

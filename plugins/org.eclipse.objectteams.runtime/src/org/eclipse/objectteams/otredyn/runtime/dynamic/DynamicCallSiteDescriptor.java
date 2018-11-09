@@ -12,6 +12,7 @@ import jdk.dynalink.StandardOperation;
 public class DynamicCallSiteDescriptor extends CallSiteDescriptor {
 
 	public static final int CALL_IN = 0;
+	public static final int CALL_NEXT = 1;
 
 	private static final int OPERATION_MASK = 1;
 
@@ -21,24 +22,28 @@ public class DynamicCallSiteDescriptor extends CallSiteDescriptor {
 	private final int flags;
 	private final String name;
 	private final String joinpointDescriptor;
+	private final CallSiteContext context;
+	private final int boundMethodId;
 
 	private DynamicCallSiteDescriptor(Lookup lookup, String name, Operation operation, MethodType type,
-			String joinpointDescriptor, int flags) {
+			String joinpointDescriptor, int boundMethodId, CallSiteContext context, int flags) {
 		super(lookup, operation, type);
 		this.name = name;
-		this.joinpointDescriptor = joinpointDescriptor;
+		this.context = context;
 		this.flags = flags;
+		this.boundMethodId = boundMethodId;
+		this.joinpointDescriptor = joinpointDescriptor;
 	}
 
 	public String getJoinpointDescriptor() {
 		return joinpointDescriptor;
 	}
 
-	public static DynamicCallSiteDescriptor get(Lookup lookup, String name, MethodType type, String joinpointDescriptor,
-			int flags) {
+	public static DynamicCallSiteDescriptor get(Lookup lookup, String name, MethodType type, String joinpointDescriptor, int boundMethodId,
+			CallSiteContext context, int flags) {
 		final int operationIndex = flags & OPERATION_MASK;
 		Operation operation = OPERATIONS[operationIndex];
-		return new DynamicCallSiteDescriptor(lookup, name, operation, type, joinpointDescriptor, flags);
+		return new DynamicCallSiteDescriptor(lookup, name, operation, type, joinpointDescriptor, boundMethodId, context, flags);
 	}
 
 	public static Operation getBaseOperation(final CallSiteDescriptor desc) {

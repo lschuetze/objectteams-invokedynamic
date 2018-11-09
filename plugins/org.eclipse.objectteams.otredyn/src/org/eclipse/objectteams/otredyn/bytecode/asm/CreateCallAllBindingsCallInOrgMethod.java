@@ -31,6 +31,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.IntInsnNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -107,7 +108,7 @@ public class CreateCallAllBindingsCallInOrgMethod extends AbstractTransformableC
 			if (size == 2)
 				maxArgSize = 2;
 		}
-		method.maxStack = args.length > 0 ? 5 + maxArgSize : 3;
+		method.maxStack = args.length > 0 ? maxArgSize * localSlots : 3;
 		method.maxLocals = localSlots + 1;
 
 		return true;
@@ -124,20 +125,36 @@ public class CreateCallAllBindingsCallInOrgMethod extends AbstractTransformableC
 		newInstructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
 		// put boundMethodId on the stack
 
+		final int bmId;
 		if (method.name.equals("<init>")) {
 			// set bit 0x8000_0000 to signal the ctor
-			newInstructions.add(createLoadIntConstant(0x8000_0000 | boundMethodId));
+//			newInstructions.add(createLoadIntConstant(0x8000_0000 | boundMethodId));
+			bmId = 0x8000_0000 | boundMethodId;
 		} else {
-			newInstructions.add(createLoadIntConstant(boundMethodId));
+//			newInstructions.add(createLoadIntConstant(boundMethodId));
+			bmId = boundMethodId;
 		}
 		// box the arguments
-		newInstructions.add(getBoxingInstructions(args, false));
+//		newInstructions.add(getBoxingInstructions(args, false));
+		
+		
+		final Type[] paramTypes = new Type[args.length + 1];
+		paramTypes[0] = Type.getObjectType(name);
 
-		String mDescr = Types.getTypeStringForMethod(Types.getAsInternalType(ClassNames.OBJECT_SLASH), new String[] {
-				Types.getAsInternalType(name), Types.INT, Types.getAsArrayType(ClassNames.OBJECT_SLASH) });
+		int slot = 0;
+		for(int i = 0; i < args.length; i++) {
+			// loat the argument
+			newInstructions.add(new VarInsnNode(args[i].getOpcode(Opcodes.ILOAD), slot + 1));
+			// store its type for the invokedynamic methodtype
+			paramTypes[i+1] = args[i];
+			// increase to the next slot
+			slot += args[i].getSize();
+		}
 
+		final String mDescr = Type.getMethodDescriptor(Type.getReturnType(method.desc), paramTypes);
+				
 		newInstructions.add(new InvokeDynamicInsnNode(method.name.replaceAll("[<>]", ""), mDescr /* method.descr */,
-				bootstrapHandle, joinpointDescr, DynamicCallSiteDescriptor.CALL_IN));
+				bootstrapHandle, joinpointDescr, bmId));
 
 		Type returnType = Type.getReturnType(method.desc);
 		newInstructions.add(getUnboxingInstructionsForReturnValue(returnType));

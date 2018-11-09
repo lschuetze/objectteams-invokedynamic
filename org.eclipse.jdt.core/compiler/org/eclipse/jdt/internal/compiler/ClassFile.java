@@ -3436,9 +3436,9 @@ public class ClassFile implements TypeConstants, TypeIds {
 					resizeContents(contentsEntries);
 				}
 				
-				char[] SIGNATURE = "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;II)Ljava/lang/invoke/CallSite;".toCharArray(); //$NON-NLS-1$
+				char[] SIGNATURE = "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;)Ljava/lang/invoke/CallSite;".toCharArray(); //$NON-NLS-1$
 				char[] NAME = "callNext".toCharArray(); //$NON-NLS-1$
-				
+				 
 				if(indexForCallNext == 0) {
 					indexForCallNext = this.constantPool.literalIndexForMethodHandle(ClassFileConstants.MethodHandleRefKindInvokeStatic, objectTeamsCallNextBootstrap, 
 						NAME, SIGNATURE, false);
@@ -3449,20 +3449,14 @@ public class ClassFile implements TypeConstants, TypeIds {
 				
 				// u2 num_bootstrap_arguments
 				this.contents[localContentsOffset++] = 0;
-				this.contents[localContentsOffset++] = (byte) 3;
+				this.contents[localContentsOffset++] = (byte) 1;
 				
-				int functionalDescriptorIndex = this.constantPool.literalIndexForMethodType(expr.binding.original().signature());
-				this.contents[localContentsOffset++] = (byte) (functionalDescriptorIndex >> 8);
-				this.contents[localContentsOffset++] = (byte) functionalDescriptorIndex;
-	
-				int methodHandleIndex = this.constantPool.literalIndexForMethodHandle(expr.binding.original()); // Speak of " implementation" (erased) version here, adaptations described below.
-				this.contents[localContentsOffset++] = (byte) (methodHandleIndex >> 8);
-				this.contents[localContentsOffset++] = (byte) methodHandleIndex;
-	
-				char [] instantiatedSignature = expr.binding.signature();
-				int methodTypeIndex = this.constantPool.literalIndexForMethodType(instantiatedSignature);
-				this.contents[localContentsOffset++] = (byte) (methodTypeIndex >> 8);
-				this.contents[localContentsOffset++] = (byte) methodTypeIndex;				
+				// Put the name of the base class into the bootstrap method
+				String baseClassName = String.valueOf(expr.codegenBinding.declaringClass.baseclass.constantPoolName);
+				int index = this.constantPool.literalIndex(baseClassName);
+				this.contents[localContentsOffset++] = (byte) (index >> 8);
+				this.contents[localContentsOffset++] = (byte) index;
+				
 			} else {
 			
 			FunctionalExpression functional = (FunctionalExpression) functionalExpressionList.get(i);

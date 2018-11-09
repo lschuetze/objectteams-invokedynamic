@@ -38,16 +38,19 @@ public class CallinBootstrap {
 	 * @param joinpointDescription
 	 * @return
 	 */
-	public static CallSite callAllBindings(MethodHandles.Lookup lookup, String name, MethodType type, String joinpointDescr,
-			int flags) {
-		return dynamicLinker
-				.link(new ChainedCallSite(DynamicCallSiteDescriptor.get(lookup, name, type, joinpointDescr, flags)));
+	public static CallSite callAllBindings(MethodHandles.Lookup lookup, String name, MethodType type,
+			String joinpointDescriptor, int boundMethodId) {
+		System.out.println(joinpointDescriptor);
+		return dynamicLinker.link(new ChainedCallSite(
+				DynamicCallSiteDescriptor.get(lookup, name, type, joinpointDescriptor, boundMethodId, null, DynamicCallSiteDescriptor.CALL_IN)));
 	}
-	
-	public static CallSite callNext(MethodHandles.Lookup lookup, String name, MethodType type,
-			IBoundBase2 baseArg, ITeam[] teams, int index, int[] callinIds, int bmId, Object[] args, Object[] boxedArgs, int basecallFlag) {
+
+	public static CallSite callNext(MethodHandles.Lookup lookup, String name, MethodType type, String baseClassName) {
 		System.out.println("CALL NEXT BOOTSTRAP");
-		return null;
+		System.out.println(baseClassName);
+//		CallSiteContext ctx = new CallSiteContext(baseArg, teams, index, callinIs, bmId, args, boxedArgs);
+		return dynamicLinker.link(new ChainedCallSite(
+				DynamicCallSiteDescriptor.get(lookup, name, type, "", -1, null, DynamicCallSiteDescriptor.CALL_NEXT)));
 	}
 
 }
