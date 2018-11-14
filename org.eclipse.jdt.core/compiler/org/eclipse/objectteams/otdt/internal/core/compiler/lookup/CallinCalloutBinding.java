@@ -28,6 +28,7 @@ import org.eclipse.jdt.internal.compiler.lookup.MethodBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ProblemReasons;
 import org.eclipse.jdt.internal.compiler.lookup.ReferenceBinding;
 import org.eclipse.jdt.internal.compiler.lookup.TypeVariableBinding;
+import org.eclipse.jdt.internal.compiler.parser.TerminalTokens;
 import org.eclipse.objectteams.otdt.core.compiler.InferenceKind;
 import org.eclipse.objectteams.otdt.internal.core.compiler.ast.CallinMappingDeclaration;
 import org.eclipse.objectteams.otdt.internal.core.compiler.util.TypeAnalyzer;
@@ -46,9 +47,9 @@ public class CallinCalloutBinding extends Binding
     public static final int CALLOUT             = 2;
 	public static final int CALLOUT_OVERRIDE    = 3;
 
-    public static final int REPLACE             = 1;
-    public static final int AFTER               = 2;
-    public static final int BEFORE              = 3;
+    public static final int REPLACE             = TerminalTokens.TokenNamereplace;
+    public static final int AFTER               = TerminalTokens.TokenNameafter;
+    public static final int BEFORE              = TerminalTokens.TokenNamebefore;
 
     public TypeVariableBinding[] typeVariables;
     public MethodBinding    _roleMethodBinding;
