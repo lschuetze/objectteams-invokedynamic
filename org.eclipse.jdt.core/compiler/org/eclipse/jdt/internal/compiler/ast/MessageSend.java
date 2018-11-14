@@ -125,6 +125,7 @@ import org.eclipse.objectteams.otdt.internal.core.compiler.ast.CalloutMappingDec
 import org.eclipse.objectteams.otdt.internal.core.compiler.control.Dependencies;
 import org.eclipse.objectteams.otdt.internal.core.compiler.control.ITranslationStates;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.AnchorMapping;
+import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.CallinCalloutBinding;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.DependentTypeBinding;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.SyntheticRoleBridgeMethodBinding;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.WeakenedTypeBinding;
@@ -658,9 +659,14 @@ public void generateCode(BlockScope currentScope, CodeStream codeStream, boolean
 	if(this.receiver instanceof BaseReference) {
 		CallNextInvokeDynamicExpression expr = new CallNextInvokeDynamicExpression((BaseReference)this.receiver, this.binding, codegenBinding);
 		final int bootStrapIndex = codeStream.classFile.recordBootstrapMethod(expr);
-		final char[] bootstrapSelector = "callNext".toCharArray(); //$NON-NLS-1$
-		final int bootstrapArgumentCount = 5;
-		codeStream.invokeDynamic(bootStrapIndex, codegenBinding.parameters.length, 1, bootstrapSelector, codegenBinding.signature()); 
+		char[] baseClassSelector = null;
+		for(CallinCalloutBinding ccBinding : codegenBinding.declaringClass.callinCallouts) {
+			if(ccBinding.isReplaceCallin() && ccBinding._declaringRoleClass.isEquivalentTo(this.binding.declaringClass)) {
+				baseClassSelector = ccBinding._baseMethods[0].selector;
+			}
+			// NOP
+		}
+		codeStream.invokeDynamic(bootStrapIndex, codegenBinding.parameters.length, 1, baseClassSelector, codegenBinding.signature()); 
 	} else {
 	
 	// actual message invocation

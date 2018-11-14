@@ -3,6 +3,7 @@ package org.eclipse.objectteams.otredyn.runtime.dynamic;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.Arrays;
 
 import org.eclipse.objectteams.otredyn.runtime.dynamic.linker.GuardingDynamicCallinLinker;
 import org.objectteams.IBoundBase2;
@@ -47,10 +48,26 @@ public class CallinBootstrap {
 
 	public static CallSite callNext(MethodHandles.Lookup lookup, String name, MethodType type, String baseClassName) {
 		System.out.println("CALL NEXT BOOTSTRAP");
-		System.out.println(baseClassName);
+		String joinpointDescriptor = baseClassName + "." + name + "(" + argumentTypeNames(type.parameterArray()) + ")";
 //		CallSiteContext ctx = new CallSiteContext(baseArg, teams, index, callinIs, bmId, args, boxedArgs);
 		return dynamicLinker.link(new ChainedCallSite(
-				DynamicCallSiteDescriptor.get(lookup, name, type, "", -1, null, DynamicCallSiteDescriptor.CALL_NEXT)));
+				DynamicCallSiteDescriptor.get(lookup, name, type, joinpointDescriptor, -1, null, DynamicCallSiteDescriptor.CALL_NEXT)));
+	}
+	
+	private static String argumentTypeNames(Class<?>[] arguments) {
+		StringBuilder sb = new StringBuilder();
+		for(Class<?> argumentType : arguments) {
+			if(argumentType.isPrimitive()) {
+				switch(argumentType.getCanonicalName()) {
+				case "double" : sb.append("D"); break;
+				case "float" : sb.append("F"); break;
+				case "int" : sb.append("I"); break;
+				}
+			} else {
+				sb.append(argumentType.getCanonicalName());
+			}
+		}
+		return sb.toString();
 	}
 
 }
