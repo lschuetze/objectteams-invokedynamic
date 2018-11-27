@@ -44,7 +44,9 @@ import org.eclipse.objectteams.otdt.internal.core.compiler.util.RoleTypeCreator;
  * Markus Witte for ObjectTeams
  */
 public class BaseReference extends ThisReference {
-	private Expression _wrappee = null;
+	public Expression _wrappee = null;
+	
+	public Expression _base = null;
 
 	public BaseReference(int start, int end) {
 		super(start, end);
@@ -82,7 +84,7 @@ public class BaseReference extends ThisReference {
 //						        				enclosingRole;
 						        				
 			this._wrappee = gen.singleTypeReference(enclosingRole.internalName());
-//			this._wrappee = gen.qualifiedTypeReference(enclosingRole.baseclass.compoundName); //gen.qualifiedTypeReference(CharOperation.splitOn('.', baseCallTypeName));//new char[][] { dynamicCallinBootstrapTypeName });
+			this._base = gen.qualifiedTypeReference(enclosingRole.baseclass.compoundName); //gen.qualifiedTypeReference(CharOperation.splitOn('.', baseCallTypeName));//new char[][] { dynamicCallinBootstrapTypeName });
 	        return enclosingRole;
 	        
 		} else if (redirectToTeam) {

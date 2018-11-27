@@ -9,6 +9,8 @@ import org.eclipse.objectteams.otredyn.runtime.dynamic.linker.support.ObjectTeam
 import org.objectteams.ITeam;
 
 public class ObjectTeamsLookup {
+	
+	private static final MethodType CallOrigType = MethodType.methodType(Object.class, int.class, Object[].class);
 
 	public static MethodHandle findOwnSpecial(MethodHandles.Lookup lookup, String name, Class<?> rtype,
 			Class<?>... ptypes) {
@@ -62,7 +64,8 @@ public class ObjectTeamsLookup {
 	}
 
 	public static MethodHandle findRoleMethod(MethodHandles.Lookup lookup, IBinding binding, ITeam team) {
-		final Class<?> roleType = ObjectTeamsTypeUtilities.getRoleImplementationType(binding, team.getClass());
+		final Class<?> roleType = ObjectTeamsTypeUtilities.getRoleImplementationType(binding.getRoleClassName(),
+				team.getClass());
 
 		final MethodType mt = MethodType.fromMethodDescriptorString(binding.getRoleMethodSignature(),
 				roleType.getClassLoader());
@@ -79,10 +82,9 @@ public class ObjectTeamsLookup {
 		}
 	}
 
-	public static MethodHandle findOrig(MethodHandles.Lookup lookup, MethodType baseMethodType) {
-		Class<?> baseClass = lookup.lookupClass();
+	public static MethodHandle findOrig(MethodHandles.Lookup lookup, Class<?> baseClass, MethodType baseMethodType) {
 		try {
-			return lookup.findVirtual(baseClass, "_OT$callOrig", baseMethodType.dropParameterTypes(0, 1));
+			return lookup.findVirtual(baseClass, "_OT$callOrig", CallOrigType);
 		} catch (NoSuchMethodException e) {
 			NoSuchMethodError ee = new NoSuchMethodError();
 			ee.initCause(e);
@@ -96,12 +98,22 @@ public class ObjectTeamsLookup {
 
 	public static MethodHandle findLifting(MethodHandles.Lookup lookup, IBinding binding, Class<?> teamClass) {
 		String liftingMethod = ("_OT$liftTo$" + binding.getRoleClassName()).intern();
-		MethodHandle convertBaseToRoleObjectHandle = findVirtual(lookup, teamClass, liftingMethod, MethodType
-				.methodType(ObjectTeamsTypeUtilities.getRoleInterfaceType(binding, teamClass), lookup.lookupClass()));
+		Class<?> baseClass;
+		try {
+			baseClass = Class.forName(binding.getBoundClass().replace('/', '.'));
+		} catch (ClassNotFoundException e) {
+			NoSuchMethodError ee = new NoSuchMethodError();
+			ee.initCause(e);
+			throw ee;
+		}
+		MethodHandle convertBaseToRoleObjectHandle = findVirtual(lookup, teamClass, liftingMethod,
+				MethodType.methodType(
+						ObjectTeamsTypeUtilities.getRoleInterfaceType(binding.getRoleClassName(), teamClass),
+						baseClass));
 
-		MethodHandle adaptedConvertBaseToRoleObjectHandle = convertBaseToRoleObjectHandle
-				.asType(MethodType.methodType(ObjectTeamsTypeUtilities.getRoleImplementationType(binding, teamClass),
-						teamClass, lookup.lookupClass()));
+		MethodHandle adaptedConvertBaseToRoleObjectHandle = convertBaseToRoleObjectHandle.asType(MethodType.methodType(
+				ObjectTeamsTypeUtilities.getRoleImplementationType(binding.getRoleClassName(), teamClass), teamClass,
+				baseClass));
 
 		return adaptedConvertBaseToRoleObjectHandle;
 	}

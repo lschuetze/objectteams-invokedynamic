@@ -7,8 +7,8 @@ public final class ObjectTeamsTypeUtilities {
 	private static final String SEPARATOR = "$__OT__";
 	private static final String ITF_SEPARATOR = "$";
 
-	public static Class<?> getRoleImplementationType(IBinding binding, Class<?> teamClass) {
-		final String roleClassName = teamClass.getName() + SEPARATOR + binding.getRoleClassName().intern();
+	public static Class<?> getRoleImplementationType(String roleName, Class<?> teamClass) {
+		final String roleClassName = teamClass.getName() + SEPARATOR + roleName;
 		try {
 			return Class.forName(roleClassName, true, teamClass.getClassLoader());
 		} catch (ClassNotFoundException e) {
@@ -18,8 +18,8 @@ public final class ObjectTeamsTypeUtilities {
 		}
 	}
 
-	public static Class<?> getRoleInterfaceType(IBinding binding, Class<?> teamClass) {
-		final String roleClassName = teamClass.getName() + ITF_SEPARATOR + binding.getRoleClassName().intern();
+	public static Class<?> getRoleInterfaceType(String roleName, Class<?> teamClass) {
+		final String roleClassName = teamClass.getName() + ITF_SEPARATOR + roleName;
 		try {
 			return Class.forName(roleClassName, true, teamClass.getClassLoader());
 		} catch (ClassNotFoundException e) {
@@ -28,5 +28,5 @@ public final class ObjectTeamsTypeUtilities {
 			throw ee;
 		}
 	}
-
+	
 }

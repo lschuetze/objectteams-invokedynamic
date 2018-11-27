@@ -3,11 +3,10 @@ package org.eclipse.objectteams.otredyn.runtime.dynamic;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.objectteams.otredyn.runtime.dynamic.linker.GuardingDynamicCallinLinker;
-import org.objectteams.IBoundBase2;
-import org.objectteams.ITeam;
 
 import jdk.dynalink.DynamicLinker;
 import jdk.dynalink.DynamicLinkerFactory;
@@ -15,7 +14,7 @@ import jdk.dynalink.linker.GuardingDynamicLinker;
 import jdk.dynalink.support.ChainedCallSite;
 
 public class CallinBootstrap {
-
+	
 	public final static MethodType BOOTSTRAP_METHOD_TYPE = MethodType.methodType(CallSite.class,
 			MethodHandles.Lookup.class, String.class, MethodType.class, String.class, int.class);
 
@@ -29,6 +28,8 @@ public class CallinBootstrap {
 		// DynamicObjectTeamsConversionStrategy());
 		return factory.createLinker();
 	}
+	
+	private Map<String, ChainedCallSite> callsites = new HashMap<>();
 
 	/**
 	 * 
@@ -41,17 +42,21 @@ public class CallinBootstrap {
 	 */
 	public static CallSite callAllBindings(MethodHandles.Lookup lookup, String name, MethodType type,
 			String joinpointDescriptor, int boundMethodId) {
-		System.out.println(joinpointDescriptor);
+		CallSiteContext context = new CallSiteContext(joinpointDescriptor, boundMethodId, lookup.lookupClass());
+		CallSiteContext.contexts.put(joinpointDescriptor, context);
+		
 		return dynamicLinker.link(new ChainedCallSite(
 				DynamicCallSiteDescriptor.get(lookup, name, type, joinpointDescriptor, boundMethodId, null, DynamicCallSiteDescriptor.CALL_IN)));
 	}
 
 	public static CallSite callNext(MethodHandles.Lookup lookup, String name, MethodType type, String baseClassName) {
-		System.out.println("CALL NEXT BOOTSTRAP");
 		String joinpointDescriptor = baseClassName + "." + name + "(" + argumentTypeNames(type.parameterArray()) + ")";
 //		CallSiteContext ctx = new CallSiteContext(baseArg, teams, index, callinIs, bmId, args, boxedArgs);
-		return dynamicLinker.link(new ChainedCallSite(
+		CallSite result = dynamicLinker.link(new ChainedCallSite(
 				DynamicCallSiteDescriptor.get(lookup, name, type, joinpointDescriptor, -1, null, DynamicCallSiteDescriptor.CALL_NEXT)));
+		
+//		CallSiteContext.contexts.remove(joinpointDescriptor);
+		return result;
 	}
 	
 	private static String argumentTypeNames(Class<?>[] arguments) {
@@ -64,7 +69,7 @@ public class CallinBootstrap {
 				case "int" : sb.append("I"); break;
 				}
 			} else {
-				sb.append(argumentType.getCanonicalName());
+				//sb.append(argumentType.getCanonicalName());
 			}
 		}
 		return sb.toString();

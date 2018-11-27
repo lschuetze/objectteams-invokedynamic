@@ -4,13 +4,12 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.SwitchPoint;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
 import org.eclipse.objectteams.otredyn.runtime.IBinding;
-import org.eclipse.objectteams.otredyn.runtime.IBinding.CallinModifier;
 import org.eclipse.objectteams.otredyn.runtime.TeamManager;
+import org.eclipse.objectteams.otredyn.runtime.dynamic.CallSiteContext;
 import org.eclipse.objectteams.otredyn.runtime.dynamic.DynamicCallSiteDescriptor;
 import org.eclipse.objectteams.otredyn.runtime.dynamic.ObjectTeamsLookup;
 import org.objectteams.ITeam;
@@ -19,11 +18,12 @@ import jdk.dynalink.linker.GuardedInvocation;
 import jdk.dynalink.linker.GuardingDynamicLinker;
 import jdk.dynalink.linker.LinkRequest;
 import jdk.dynalink.linker.LinkerServices;
+import jdk.dynalink.linker.support.Guards;
 
 public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
-	
+
 	private static final MethodHandle MH_GET_TEAMS = getTeams();
-	
+
 	private static final MethodHandle MH_GET_CALLINIDS = getCallinIds();
 
 	@Override
@@ -44,7 +44,9 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 			case DynamicCallSiteDescriptor.CALL_IN:
 				result = constructCallinComposition(desc, linkRequest, linkerServices);
 				break;
-
+			case DynamicCallSiteDescriptor.CALL_NEXT:
+				result = constructCallinComposition(desc, linkRequest, linkerServices);
+				break;
 			}
 
 			break;
@@ -67,32 +69,39 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 	 */
 	private GuardedInvocation constructCallinComposition(DynamicCallSiteDescriptor desc, LinkRequest linkRequest,
 			LinkerServices linkerServices) {
+		
 		final int joinpointId = TeamManager.getJoinpointId(desc.getJoinpointDescriptor());
 		final MethodType baseMethodType = desc.getMethodType();
 		// TODO: Replace with MHs
-		final ITeam[] teams = TeamManager.getTeams(joinpointId);
+		CallSiteContext context = CallSiteContext.contexts.get(desc.getJoinpointDescriptor());
 		final int[] callinIds = TeamManager.getCallinIds(joinpointId);
 
 		MethodHandle beforeComposition = null;
 		MethodHandle afterComposition = null;
 		MethodHandle replace = null;
 
-		HashSet<IBinding> processedBindings = new HashSet<>();
+		HashSet<IBinding> processedBindings = context.proccessedBindings; // new HashSet<>();
 		boolean stopSearch = false;
 
-		for (ITeam currentTeam : teams) {
+		for (int i = context.index; i < context.teams.length; i++) {
+			context.index++;
+
+			ITeam currentTeam = context.teams[i];
+
 			List<IBinding> sortedCallinBindings = TeamManager.getPrecedenceSortedCallinBindings(currentTeam,
 					desc.getJoinpointDescriptor());
+
+
 			sortedCallinBindings.removeIf(processedBindings::contains);
-			
+
 			for (IBinding binding : sortedCallinBindings) {
 				processedBindings.add(binding);
 
 				MethodHandle roleMethod = ObjectTeamsLookup.findRoleMethod(desc.getLookup(), binding, currentTeam);
-				//System.out.println("BEFORE: " + roleMethod);
+				// System.out.println("BEFORE: " + roleMethod);
 //				if(binding.getCallinModifier() == CallinModifier.REPLACE)
 //					roleMethod = MethodHandles.insertArguments(roleMethod, 1, desc.getLookup(), "moep", desc.getMethodType());
-				//System.out.println("AFTER: " + roleMethod);
+				// System.out.println("AFTER: " + roleMethod);
 				MethodHandle liftRoleHandle = ObjectTeamsLookup.findLifting(desc.getLookup(), binding,
 						currentTeam.getClass());
 				MethodHandle liftRole = liftRoleHandle.bindTo(currentTeam);
@@ -110,41 +119,50 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 							: MethodHandles.foldArguments(afterComposition, afterHandle);
 					break;
 
-				case REPLACE:	
-					replace = resolveReplaceCallin(baseMethodType, teams, callinIds, roleMethod, liftRole);
+				case REPLACE:
+					replace = resolveReplaceCallin(baseMethodType, context.teams, callinIds, roleMethod, liftRole);
 					stopSearch = true;
 					break;
 				}
 				// Check if we found a callin
-				if(stopSearch) {
+				if (stopSearch) {
 					break;
 				}
 			}
 			// Check if we found a callin
-			if(stopSearch) {
+			if (stopSearch) {
 				break;
 			}
 		}
 
-		MethodHandle compositionHandle = (replace == null)
-				? ObjectTeamsLookup.findOrig(desc.getLookup(), baseMethodType)
-				: replace;
+		MethodHandle compositionHandle = null;
+		if (replace == null) {
+			compositionHandle = ObjectTeamsLookup.findOrig(desc.getLookup(), context.baseClass, baseMethodType);
+			compositionHandle = MethodHandles.insertArguments(compositionHandle, 1, context.bmId);
+			compositionHandle = compositionHandle.asCollector(Object[].class, 1);
+		} else {
+			compositionHandle = replace;
+		}
 
 		if (beforeComposition != null) {
 			compositionHandle = MethodHandles.foldArguments(compositionHandle, beforeComposition);
 		}
-		
+
 		if (afterComposition != null) {
-			// if compositionHandle returns a value it need to be ignored and stored for later
+			// if compositionHandle returns a value it need to be ignored and stored for
+			// later
 //			compositionHandle = MethodHandles.foldArguments(afterComposition, compositionHandle);
 		}
 
 		// TODO: Share a switchpoint for a joinpointid ?
-		final SwitchPoint sp = new SwitchPoint();
-		TeamManager.registerSwitchPoint(sp, joinpointId);
+		SwitchPoint sp = TeamManager.getSwitchPoint(joinpointId);
+		if(sp == null) {
+			sp = new SwitchPoint();
+			TeamManager.registerSwitchPoint(sp, joinpointId);
+		}
 		return new GuardedInvocation(compositionHandle, sp);
 	}
-
+	
 	private MethodHandle resolveBeforeAfterCAllin(MethodHandle roleMethod, MethodHandle liftRole) {
 		final MethodHandle adapted = MethodHandles.filterArguments(roleMethod, 0, liftRole);
 //		final MethodHandle reduced = MethodHandles.dropArguments(adapted, 1, int.class, Object[].class);
@@ -185,11 +203,11 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 //		}
 //		return MethodHandles.permuteArguments(adaptedReplace, doubleBaseType, reordering);
 	}
-	
+
 	private static MethodHandle getTeams() {
 		return null;
 	}
-	
+
 	private static MethodHandle getCallinIds() {
 		return null;
 	}

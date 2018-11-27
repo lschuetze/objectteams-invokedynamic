@@ -1,27 +1,34 @@
 package org.eclipse.objectteams.otredyn.runtime.dynamic;
 
-import org.objectteams.IBoundBase2;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.eclipse.objectteams.otredyn.runtime.IBinding;
+import org.eclipse.objectteams.otredyn.runtime.TeamManager;
 import org.objectteams.ITeam;
 
 public class CallSiteContext {
+	
+	public static Map<String, CallSiteContext> contexts = new ConcurrentHashMap<>();
+	
+	public ITeam[] teams;
+	public int index;
+	public final int bmId;
+	public final String joinpointDescr;
+	
+	public final Class<?> baseClass;
+	
+	public HashSet<IBinding> proccessedBindings = new HashSet<IBinding>();
 
-	private IBoundBase2 baseArg;
-	private ITeam[] teams;
-	private int index;
-	private int[] callinIs;
-	private int bmId;
-	private Object[] args;
-	private Object[] boxedArgs;
-
-	public CallSiteContext(IBoundBase2 baseArg, ITeam[] teams, int index, int[] callinIs, int bmId, Object[] args,
-			Object[] boxedArgs) {
-		this.baseArg = baseArg;
-		this.teams = teams;
-		this.index = index;
-		this.callinIs = callinIs;
+	public CallSiteContext(String joinpointDescr, int bmId, Class<?> baseClass) {
+		this.joinpointDescr = joinpointDescr;
 		this.bmId = bmId;
-		this.args = args;
-		this.boxedArgs = boxedArgs;
+		this.index = 0;
+		this.baseClass = baseClass;
+		
+		final int joinpointId = TeamManager.getJoinpointId(joinpointDescr);
+		teams = TeamManager.getTeams(joinpointId);
 	}
 
 }

@@ -152,7 +152,7 @@ public class CreateCallAllBindingsCallInOrgMethod extends AbstractTransformableC
 		}
 
 		final String mDescr = Type.getMethodDescriptor(Type.getReturnType(method.desc), paramTypes);
-				
+		
 		newInstructions.add(new InvokeDynamicInsnNode(method.name.replaceAll("[<>]", ""), mDescr /* method.descr */,
 				bootstrapHandle, joinpointDescr, bmId));
 

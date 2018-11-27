@@ -489,6 +489,17 @@ public class TeamManager implements ITeamManager {
 			list.add(newSwitchPoint);
 		}
 	}
+	
+	public synchronized static SwitchPoint getSwitchPoint(int joinpointId) {
+		if (_switchpoints.size() > joinpointId) {
+			List<SwitchPoint> list = _switchpoints.get(joinpointId);
+			if(list.size() == 0) {
+				return null;
+			}
+			return list.get(0);
+		}
+		return null;
+	}
 
 	public static List<IBinding> getPrecedenceSortedCallinBindings(ITeam team, String joinpoint) {
 		IClassIdentifierProvider provider = ClassIdentifierProviderFactory.getClassIdentifierProvider();

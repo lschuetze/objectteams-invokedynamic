@@ -64,10 +64,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.compiler.ast;
 
-import static org.eclipse.jdt.internal.compiler.ast.ExpressionContext.*;
+import static org.eclipse.jdt.internal.compiler.ast.ExpressionContext.ASSIGNMENT_CONTEXT;
+import static org.eclipse.jdt.internal.compiler.ast.ExpressionContext.INVOCATION_CONTEXT;
+import static org.eclipse.jdt.internal.compiler.ast.ExpressionContext.VANILLA_CONTEXT;
 import static org.eclipse.objectteams.otdt.core.compiler.IOTConstants.CALLIN_FLAG_DEFINITELY_MISSING_BASECALL;
 import static org.eclipse.objectteams.otdt.core.compiler.IOTConstants.CALLIN_FLAG_POTENTIALLY_MISSING_BASECALL;
-import static org.eclipse.objectteams.otdt.internal.core.compiler.lookup.SyntheticOTTargetMethod.OTDREMethodDecapsulation;
 
 import java.util.HashMap;
 
@@ -82,10 +83,10 @@ import org.eclipse.jdt.internal.compiler.flow.FlowContext;
 import org.eclipse.jdt.internal.compiler.flow.FlowInfo;
 import org.eclipse.jdt.internal.compiler.flow.UnconditionalFlowInfo;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
+import org.eclipse.jdt.internal.compiler.impl.CompilerOptions.WeavingScheme;
 import org.eclipse.jdt.internal.compiler.impl.Constant;
 import org.eclipse.jdt.internal.compiler.impl.IrritantSet;
 import org.eclipse.jdt.internal.compiler.impl.ReferenceContext;
-import org.eclipse.jdt.internal.compiler.impl.CompilerOptions.WeavingScheme;
 import org.eclipse.jdt.internal.compiler.lookup.AnnotationBinding;
 import org.eclipse.jdt.internal.compiler.lookup.ArrayBinding;
 import org.eclipse.jdt.internal.compiler.lookup.Binding;
@@ -127,6 +128,7 @@ import org.eclipse.objectteams.otdt.internal.core.compiler.control.ITranslationS
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.AnchorMapping;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.CallinCalloutBinding;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.DependentTypeBinding;
+import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.SyntheticOTTargetMethod.OTDREMethodDecapsulation;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.SyntheticRoleBridgeMethodBinding;
 import org.eclipse.objectteams.otdt.internal.core.compiler.lookup.WeakenedTypeBinding;
 import org.eclipse.objectteams.otdt.internal.core.compiler.mappings.CalloutImplementor;
@@ -615,6 +617,11 @@ public void generateCode(BlockScope currentScope, CodeStream codeStream, boolean
 	} else {
 		if(this.receiver instanceof BaseReference) {
 //			NOP - we generate an invokedynamic
+			codeStream.aload_0();
+			codeStream.invoke(Opcodes.OPC_invokevirtual,
+					codegenBinding.declaringClass.getMethods("_OT$getBase".toCharArray())[0],
+					codegenBinding.receiver);
+			
 		} else {
 			this.receiver.generateCode(currentScope, codeStream, true);
 			if ((this.bits & NeedReceiverGenericCast) != 0) {
@@ -666,7 +673,9 @@ public void generateCode(BlockScope currentScope, CodeStream codeStream, boolean
 			}
 			// NOP
 		}
-		codeStream.invokeDynamic(bootStrapIndex, codegenBinding.parameters.length, 1, baseClassSelector, codegenBinding.signature()); 
+		String signature = String.valueOf(codegenBinding.signature());
+		String signatureExt = "(L" + ((BaseReference) receiver)._base.toString().replace('.', '/') + ";" + signature.substring(1);
+		codeStream.invokeDynamic(bootStrapIndex, codegenBinding.parameters.length, 1, baseClassSelector, signatureExt.toCharArray()); 
 	} else {
 	
 	// actual message invocation
