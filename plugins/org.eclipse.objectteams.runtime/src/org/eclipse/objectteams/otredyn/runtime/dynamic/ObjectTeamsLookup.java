@@ -3,6 +3,8 @@ package org.eclipse.objectteams.otredyn.runtime.dynamic;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.objectteams.otredyn.runtime.IBinding;
 import org.eclipse.objectteams.otredyn.runtime.dynamic.linker.support.ObjectTeamsTypeUtilities;
@@ -11,6 +13,10 @@ import org.objectteams.ITeam;
 public class ObjectTeamsLookup {
 	
 	private static final MethodType CallOrigType = MethodType.methodType(Object.class, int.class, Object[].class);
+	
+	private static final Map<String, MethodType> METHODTYPE_CACHE = new HashMap<>();
+	
+	private static final Map<String, MethodHandle> METHODHANDLE_CACHE = new HashMap<>();
 
 	public static MethodHandle findOwnSpecial(MethodHandles.Lookup lookup, String name, Class<?> rtype,
 			Class<?>... ptypes) {
@@ -98,6 +104,12 @@ public class ObjectTeamsLookup {
 
 	public static MethodHandle findLifting(MethodHandles.Lookup lookup, IBinding binding, Class<?> teamClass) {
 		String liftingMethod = ("_OT$liftTo$" + binding.getRoleClassName()).intern();
+		
+		final String key = teamClass.getName() + "$" + binding.getRoleClassName();
+		if(METHODHANDLE_CACHE.containsKey(key)) {
+			return METHODHANDLE_CACHE.get(key);
+		}
+		
 		Class<?> baseClass;
 		try {
 			baseClass = Class.forName(binding.getBoundClass().replace('/', '.'));
@@ -115,6 +127,7 @@ public class ObjectTeamsLookup {
 				ObjectTeamsTypeUtilities.getRoleImplementationType(binding.getRoleClassName(), teamClass), teamClass,
 				baseClass));
 
+		METHODHANDLE_CACHE.put(key, adaptedConvertBaseToRoleObjectHandle);
 		return adaptedConvertBaseToRoleObjectHandle;
 	}
 
