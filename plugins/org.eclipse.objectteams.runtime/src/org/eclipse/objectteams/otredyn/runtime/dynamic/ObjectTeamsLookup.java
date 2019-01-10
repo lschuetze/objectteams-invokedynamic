@@ -8,15 +8,12 @@ import java.util.Map;
 
 import org.eclipse.objectteams.otredyn.runtime.IBinding;
 import org.eclipse.objectteams.otredyn.runtime.dynamic.linker.support.ObjectTeamsTypeUtilities;
-import org.objectteams.ITeam;
 
 public class ObjectTeamsLookup {
-	
+
 	private static final MethodType CallOrigType = MethodType.methodType(Object.class, int.class, Object[].class);
-	
-	private static final Map<String, MethodType> METHODTYPE_CACHE = new HashMap<>();
-	
-	private static final Map<String, MethodHandle> METHODHANDLE_CACHE = new HashMap<>();
+
+	private static final Map<String, MethodHandle> LIFTING_CACHE = new HashMap<>();
 
 	public static MethodHandle findOwnSpecial(MethodHandles.Lookup lookup, String name, Class<?> rtype,
 			Class<?>... ptypes) {
@@ -69,9 +66,9 @@ public class ObjectTeamsLookup {
 		}
 	}
 
-	public static MethodHandle findRoleMethod(MethodHandles.Lookup lookup, IBinding binding, ITeam team) {
+	public static MethodHandle findRoleMethod(MethodHandles.Lookup lookup, IBinding binding, Class<?> teamClass) {
 		final Class<?> roleType = ObjectTeamsTypeUtilities.getRoleImplementationType(binding.getRoleClassName(),
-				team.getClass());
+				teamClass);
 
 		final MethodType mt = MethodType.fromMethodDescriptorString(binding.getRoleMethodSignature(),
 				roleType.getClassLoader());
@@ -103,14 +100,12 @@ public class ObjectTeamsLookup {
 	}
 
 	public static MethodHandle findLifting(MethodHandles.Lookup lookup, IBinding binding, Class<?> teamClass) {
-		String liftingMethod = ("_OT$liftTo$" + binding.getRoleClassName()).intern();
-		
 		final String key = teamClass.getName() + "$" + binding.getRoleClassName();
-		if(METHODHANDLE_CACHE.containsKey(key)) {
-			return METHODHANDLE_CACHE.get(key);
+		if (LIFTING_CACHE.containsKey(key)) {
+			return LIFTING_CACHE.get(key);
 		}
-		
-		Class<?> baseClass;
+
+		final Class<?> baseClass;
 		try {
 			baseClass = Class.forName(binding.getBoundClass().replace('/', '.'));
 		} catch (ClassNotFoundException e) {
@@ -118,16 +113,17 @@ public class ObjectTeamsLookup {
 			ee.initCause(e);
 			throw ee;
 		}
-		MethodHandle convertBaseToRoleObjectHandle = findVirtual(lookup, teamClass, liftingMethod,
+		final String liftingMethod = ("_OT$liftTo$" + binding.getRoleClassName());
+		final MethodHandle convertBaseToRoleObjectHandle = findVirtual(lookup, teamClass, liftingMethod,
 				MethodType.methodType(
 						ObjectTeamsTypeUtilities.getRoleInterfaceType(binding.getRoleClassName(), teamClass),
 						baseClass));
 
-		MethodHandle adaptedConvertBaseToRoleObjectHandle = convertBaseToRoleObjectHandle.asType(MethodType.methodType(
+		final MethodHandle adaptedConvertBaseToRoleObjectHandle = convertBaseToRoleObjectHandle.asType(MethodType.methodType(
 				ObjectTeamsTypeUtilities.getRoleImplementationType(binding.getRoleClassName(), teamClass), teamClass,
 				baseClass));
 
-		METHODHANDLE_CACHE.put(key, adaptedConvertBaseToRoleObjectHandle);
+		LIFTING_CACHE.put(key, adaptedConvertBaseToRoleObjectHandle);
 		return adaptedConvertBaseToRoleObjectHandle;
 	}
 

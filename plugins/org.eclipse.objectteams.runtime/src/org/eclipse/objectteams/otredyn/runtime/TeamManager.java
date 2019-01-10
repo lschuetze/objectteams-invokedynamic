@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import org.objectteams.ITeam;
 import org.objectteams.ITeamManager;
@@ -507,17 +509,12 @@ public class TeamManager implements ITeamManager {
 		String teamId = provider.getClassIdentifier(teamClass);
 		IBoundTeam boundTeam = classRepository.getTeam(teamClass.getName(), teamId, teamClass.getClassLoader());
 
-		List<IBinding> result = new ArrayList<>(boundTeam.getBindings().size());
-		
-		for (IBinding binding : boundTeam.getBindings()) {
-			if (binding.getType() != IBinding.BindingType.CALLIN_BINDING)
-				continue;
-
-			String bindingJoinpoint = getBindingJoinpoint(binding, teamClass);
-			if (bindingJoinpoint.equals(joinpoint)) {
-				result.add(binding);
-			}
-		}
+		@SuppressWarnings("unlikely-arg-type")
+		List<IBinding> result = boundTeam.getBindings().stream()
+				.filter(b -> IBinding.BindingType.CALLIN_BINDING.equals(b.getType()))
+				.filter(b -> joinpoint.equals(getBindingJoinpoint(b, teamClass)))
+				.collect(Collectors.toList());
+				
 		return result;
 	}
 

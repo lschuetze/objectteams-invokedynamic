@@ -44,7 +44,6 @@ public class CallinBootstrap {
 			String joinpointDescriptor, int boundMethodId) {
 		CallSiteContext context = new CallSiteContext(joinpointDescriptor, boundMethodId, lookup.lookupClass());
 		CallSiteContext.contexts.put(joinpointDescriptor, context);
-		
 		return dynamicLinker.link(new ChainedCallSite(
 				DynamicCallSiteDescriptor.get(lookup, name, type, joinpointDescriptor, boundMethodId, null, DynamicCallSiteDescriptor.CALL_IN)));
 	}

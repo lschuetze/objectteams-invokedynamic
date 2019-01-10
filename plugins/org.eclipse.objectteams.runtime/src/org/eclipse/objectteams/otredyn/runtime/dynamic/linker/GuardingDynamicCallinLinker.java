@@ -4,8 +4,11 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.SwitchPoint;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.objectteams.otredyn.runtime.IBinding;
 import org.eclipse.objectteams.otredyn.runtime.TeamManager;
@@ -22,6 +25,28 @@ import jdk.dynalink.linker.support.Lookup;
 
 public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 
+	private static final Map<IBinding, MethodHandle> CALLIN_HANDLE_MAP;
+
+	private static final MethodHandle LIFT;
+
+	private static MethodHandle LIFT(MethodHandles.Lookup lookup, IBinding binding, Class<?> teamClass) {
+		return MethodHandles.insertArguments(LIFT, 0, lookup, binding, teamClass);
+	}
+
+	@SuppressWarnings("unused")
+	private static MethodHandle lifting(MethodHandles.Lookup lookup, IBinding binding, Class<?> teamClass, ITeam team) {
+		MethodHandle roleMethod = ObjectTeamsLookup.findRoleMethod(lookup, binding, teamClass);
+		MethodHandle liftRoleHandle = ObjectTeamsLookup.findLifting(lookup, binding, teamClass);
+		MethodHandle liftRole = liftRoleHandle.bindTo(team);
+		return MethodHandles.filterArguments(roleMethod, 0, liftRole);
+	}
+
+	static {
+		CALLIN_HANDLE_MAP = new HashMap<>();
+		LIFT = Lookup.findOwnStatic(MethodHandles.lookup(), "lifting", MethodHandle.class, MethodHandles.Lookup.class,
+				IBinding.class, Class.class, ITeam.class);
+	}
+
 	@Override
 	public GuardedInvocation getGuardedInvocation(LinkRequest linkRequest, LinkerServices linkerServices)
 			throws Exception {
@@ -31,20 +56,21 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 
 		final DynamicCallSiteDescriptor desc = (DynamicCallSiteDescriptor) linkRequest.getCallSiteDescriptor();
 		GuardedInvocation result = null;
+		CallSiteContext ctx = CallSiteContext.contexts.get(desc.getJoinpointDescriptor());
 
 		switch (DynamicCallSiteDescriptor.getStandardOperation(desc)) {
 
 		case CALL:
-
 			switch (desc.getFlags()) {
 			case DynamicCallSiteDescriptor.CALL_IN:
-				result = constructCallinComposition(desc, linkRequest, linkerServices);
+				ctx.updateTeams();
+				ctx.resetIndex();
+				result = constructCallinComposition(desc, linkRequest, linkerServices, ctx);
 				break;
 			case DynamicCallSiteDescriptor.CALL_NEXT:
-				result = constructCallinComposition(desc, linkRequest, linkerServices);
+				result = constructCallinComposition(desc, linkRequest, linkerServices, ctx);
 				break;
 			}
-
 			break;
 		default:
 			// TODO other cases
@@ -64,13 +90,11 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 	 * @return
 	 */
 	private GuardedInvocation constructCallinComposition(DynamicCallSiteDescriptor desc, LinkRequest linkRequest,
-			LinkerServices linkerServices) {
+			LinkerServices linkerServices, CallSiteContext context) {
 
 		final int joinpointId = TeamManager.getJoinpointId(desc.getJoinpointDescriptor());
 		final MethodType baseMethodType = desc.getMethodType();
 		// TODO: Replace with MHs
-		CallSiteContext context = CallSiteContext.contexts.get(desc.getJoinpointDescriptor());
-		final int[] callinIds = TeamManager.getCallinIds(joinpointId);
 
 		MethodHandle beforeComposition = null;
 		MethodHandle afterComposition = null;
@@ -79,8 +103,11 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 		HashSet<IBinding> processedBindings = context.proccessedBindings; // new HashSet<>();
 		boolean stopSearch = false;
 
-		for (ITeam currentTeam : context.teams) {
-			context.index++;
+		Iterator<ITeam> teamIterator = context.iterator();
+
+		while (teamIterator.hasNext()) {
+			ITeam currentTeam = teamIterator.next();
+			Class<?> teamClass = currentTeam.getClass();
 
 			List<IBinding> sortedCallinBindings = TeamManager.getPrecedenceSortedCallinBindings(currentTeam,
 					desc.getJoinpointDescriptor());
@@ -90,9 +117,8 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 			for (IBinding binding : sortedCallinBindings) {
 				processedBindings.add(binding);
 
-				MethodHandle roleMethod = ObjectTeamsLookup.findRoleMethod(desc.getLookup(), binding, currentTeam);
-				MethodHandle liftRoleHandle = ObjectTeamsLookup.findLifting(desc.getLookup(), binding,
-						currentTeam.getClass());
+				MethodHandle roleMethod = ObjectTeamsLookup.findRoleMethod(desc.getLookup(), binding, teamClass);
+				MethodHandle liftRoleHandle = ObjectTeamsLookup.findLifting(desc.getLookup(), binding, teamClass);
 				MethodHandle liftRole = liftRoleHandle.bindTo(currentTeam);
 
 				MethodHandle callinHandle = MethodHandles.filterArguments(roleMethod, 0, liftRole);
@@ -150,14 +176,6 @@ public class GuardingDynamicCallinLinker implements GuardingDynamicLinker {
 			TeamManager.registerSwitchPoint(sp, joinpointId);
 		}
 		return new GuardedInvocation(compositionHandle, sp);
-	}
-
-	private static MethodHandle getTeams() {
-		return null;
-	}
-
-	private static MethodHandle getCallinIds() {
-		return null;
 	}
 
 }
