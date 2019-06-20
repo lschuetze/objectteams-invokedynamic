@@ -19,6 +19,7 @@ package org.eclipse.objectteams.otredyn.bytecode.asm;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.Arrays;
 
 import org.eclipse.objectteams.otredyn.bytecode.Method;
 import org.eclipse.objectteams.otredyn.bytecode.Types;
@@ -98,7 +99,7 @@ public class CreateCallAllBindingsCallInOrgMethod extends AbstractTransformableC
 		}
 
 		// catch and unwrap SneakyException:
-		addCatchSneakyException(method, start);
+		// addCatchSneakyException(method, start);
 
 		int localSlots = 0;
 		int maxArgSize = 1;
@@ -108,53 +109,38 @@ public class CreateCallAllBindingsCallInOrgMethod extends AbstractTransformableC
 			if (size == 2)
 				maxArgSize = 2;
 		}
-		method.maxStack = args.length > 0 ? maxArgSize * localSlots : 3;
+		method.maxStack = args.length > 0 ? maxArgSize * localSlots : 1;
 		method.maxLocals = localSlots + 1;
 
 		return true;
 	}
-	
-	
+
 	private static final Handle bootstrapHandle = new Handle(Opcodes.H_INVOKESTATIC,
 			"org/eclipse/objectteams/otredyn/runtime/dynamic/CallinBootstrap", "callAllBindings",
 			CallinBootstrap.BOOTSTRAP_METHOD_TYPE.toMethodDescriptorString(), false);
 
 	private void generateInvocation(MethodNode method, Type[] args, AbstractInsnNode insertBefore,
 			InsnList newInstructions) {
+
 		// put this on the stack to call the method on
 		newInstructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
 		// put boundMethodId on the stack
 
-		final int bmId;
-		if (method.name.equals("<init>")) {
-			// set bit 0x8000_0000 to signal the ctor
-//			newInstructions.add(createLoadIntConstant(0x8000_0000 | boundMethodId));
-			bmId = 0x8000_0000 | boundMethodId;
-		} else {
-//			newInstructions.add(createLoadIntConstant(boundMethodId));
-			bmId = boundMethodId;
-		}
-		// box the arguments
-//		newInstructions.add(getBoxingInstructions(args, false));
-		
-		
-		final Type[] paramTypes = new Type[args.length + 1];
-		paramTypes[0] = Type.getObjectType(name);
-
-		int slot = 0;
-		for(int i = 0; i < args.length; i++) {
-			// loat the argument
-			newInstructions.add(new VarInsnNode(args[i].getOpcode(Opcodes.ILOAD), slot + 1));
-			// store its type for the invokedynamic methodtype
-			paramTypes[i+1] = args[i];
+		for (int i = 0, slot = 1; i < args.length; i++) {
+			// load the argument from the original function to be passes into the new
+			// function
+			newInstructions.add(new VarInsnNode(args[i].getOpcode(Opcodes.ILOAD), slot));
 			// increase to the next slot
 			slot += args[i].getSize();
 		}
 
-		final String mDescr = Type.getMethodDescriptor(Type.getReturnType(method.desc), paramTypes);
-		
+		Type[] desc = new Type[args.length + 1];
+		desc[0] = Type.getObjectType(name);
+		System.arraycopy(args, 0, desc, 1, args.length);
+		final String mDescr = Type.getMethodDescriptor(Type.getReturnType(method.desc), desc);
+
 		newInstructions.add(new InvokeDynamicInsnNode(method.name.replaceAll("[<>]", ""), mDescr /* method.descr */,
-				bootstrapHandle, joinpointDescr, bmId));
+				bootstrapHandle, joinpointDescr, maskBoundMethodId(method)));
 
 		Type returnType = Type.getReturnType(method.desc);
 		newInstructions.add(getUnboxingInstructionsForReturnValue(returnType));
@@ -165,6 +151,19 @@ public class CreateCallAllBindingsCallInOrgMethod extends AbstractTransformableC
 		} else {
 			method.instructions.add(newInstructions);
 		}
+	}
+
+	private int maskBoundMethodId(MethodNode method) {
+		final int bmId;
+		if (method.name.equals("<init>")) {
+			// set bit 0x8000_0000 to signal the ctor
+//			newInstructions.add(createLoadIntConstant(0x8000_0000 | boundMethodId));
+			bmId = 0x8000_0000 | boundMethodId;
+		} else {
+//			newInstructions.add(createLoadIntConstant(boundMethodId));
+			bmId = boundMethodId;
+		}
+		return bmId;
 	}
 
 	void addCatchSneakyException(MethodNode method, LabelNode start) {

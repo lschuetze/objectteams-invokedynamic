@@ -110,10 +110,10 @@ public abstract class AbstractTransformableClassNode extends ClassNode {
 			instructions.add(new InsnNode(Opcodes.ARETURN));
 			break;
 		default:
-			String objectType = AsmTypeHelper.getBoxingType(returnType);
-			instructions.add(new TypeInsnNode(Opcodes.CHECKCAST, objectType));
-			instructions.add(AsmTypeHelper.getUnboxingInstructionForType(
-					returnType, objectType));
+//			String objectType = AsmTypeHelper.getBoxingType(returnType);
+//			instructions.add(new TypeInsnNode(Opcodes.CHECKCAST, objectType));
+//			instructions.add(AsmTypeHelper.getUnboxingInstructionForType(
+//					returnType, objectType));
 			instructions
 					.add(new InsnNode(returnType.getOpcode(Opcodes.IRETURN)));
 		}
